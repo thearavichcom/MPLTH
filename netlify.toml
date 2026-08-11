@@ -1,0 +1,9 @@
+[build]
+  publish = "."
+  command = ""
+
+# เปิดโดเมนเปล่า thearavich.com → เข้า CRM เลย
+[[redirects]]
+  from = "/"
+  to = "/MPLCRM.html"
+  status = 200
