@@ -10,7 +10,7 @@
 
 [[redirects]]
   from = "/mplthquote"
-  to = "/MPLQuote.html"
+  to = "/quote.html"
   status = 200
 
 [[redirects]]
