@@ -2,8 +2,18 @@
   publish = "."
   command = ""
 
-# เปิดโดเมนเปล่า thearavich.com → เข้า CRM เลย
+# Clean paths — ไม่แตะ root (thearavich.com เปล่า ๆ ยังเป็นของเดิม)
 [[redirects]]
-  from = "/"
+  from = "/mplthcrm"
   to = "/MPLCRM.html"
+  status = 200
+
+[[redirects]]
+  from = "/mplthquote"
+  to = "/MPLQuote.html"
+  status = 200
+
+[[redirects]]
+  from = "/mplthexec"
+  to = "/Execwork.html"
   status = 200
