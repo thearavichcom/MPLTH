@@ -244,6 +244,9 @@
   .cal-dn{font-size:12px;font-weight:600;color:var(--ink);width:22px;height:22px;display:flex;align-items:center;justify-content:center;border-radius:50%;margin-bottom:3px}
   .cal-ev{font-size:11px;padding:2px 6px;border-radius:4px;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:var(--accent-soft);color:var(--accent-ink);cursor:pointer}
   .cal-ev.outlook{background:#E8EEF8;color:#2A5AA8}
+  .cal-ev.ev-visit{background:#EDE9FE;color:#6D28D9}
+  .cal-ev.ev-visit-done{background:#DDD6FE;color:#5B21B6}
+  .cal-ev.ev-visit-cx{background:#F1F1F4;color:#9AA0A6;text-decoration:line-through;opacity:.75}
   .cal-more{font-size:10.5px;color:var(--faint)}
   @media(max-width:640px){.cal-cell{min-height:70px;padding:4px}.cal-ev{font-size:10px}}
   /* modal */
@@ -1239,6 +1242,15 @@ async function fetchAll(coll,order){
     return (data||[]).map(m.from);
   }catch(e){dbErr(e,'load '+((m&&m.t)||coll));return [];}
 }
+async function fetchVisits(){
+  try{
+    const {data,error}=await sb().from('meetings')
+      .select('id,company,meeting_date,meeting_time,meeting_address,objective,summary,status,sales_person_id,user_profiles(name)')
+      .order('meeting_date',{ascending:false});
+    if(error){dbErr(error,'load meetings');return [];}
+    return (data||[]).map(r=>({id:r.id,company:r.company||'',date:r.meeting_date||'',time:r.meeting_time||'',address:r.meeting_address||'',objective:r.objective||'',summary:r.summary||'',status:(r.status||'appointed'),sales:(r.user_profiles&&r.user_profiles.name)||''}));
+  }catch(e){dbErr(e,'load meetings');return [];}
+}
 
 /* toast ------------------------------------------------------------- */
 function toast(msg,bad){
@@ -1262,11 +1274,12 @@ async function loadAll(){
   me=MY.code;todoView=MY.code;
   NAMES[MY.code]=MY.title||MY.name;
 
-  const [td,pj,pu,pm,ev,lv,lb,as,cr,lg,sp,vc,sop,hb,jf,ja,nt,rm,ra]=await Promise.all([
+  const [td,pj,pu,pm,ev,lv,lb,as,cr,lg,sp,vc,sop,hb,jf,ja,nt,rm,ra,vis]=await Promise.all([
     fetchAll('todos'),fetchAll('projects'),fetchAll('project_updates'),fetchAll('project_milestones'),
     fetchAll('events'),fetchAll('leave'),fetchAll('leaveBal'),fetchAll('assess'),fetchAll('creds'),
     fetchAll('logs'),fetchAll('supplies'),fetchAll('vouchers'),fetchAll('sops','created_at'),fetchAll('handbook'),
-    fetchAll('jobForms'),fetchAll('applicants'),fetchAll('notices'),fetchAll('reminders'),fetchAll('rls')
+    fetchAll('jobForms'),fetchAll('applicants'),fetchAll('notices'),fetchAll('reminders'),fetchAll('rls'),
+    fetchVisits()
   ]);
 
   todos=td;
@@ -1274,7 +1287,7 @@ async function loadAll(){
   const byPid={};PROJECTS.forEach(p=>byPid[p.id]=p);
   pu.forEach(u=>{if(byPid[u.project_id])byPid[u.project_id].updates.push(u);});
   pm.forEach(x=>{if(byPid[x.project_id])byPid[x.project_id].milestones.push(x);});
-  EVENTS=ev;LEAVE=lv;LEAVE_BAL=lb;ASSESS=as;CREDS=cr;
+  EVENTS=ev;LEAVE=lv;LEAVE_BAL=lb;ASSESS=as;CREDS=cr;VISITS=vis;
 
   Object.keys(LOGS).forEach(k=>LOGS[k].entries=[]);
   lg.forEach(e=>{if(LOGS[e.module_key])LOGS[e.module_key].entries.push(e);});
@@ -1385,6 +1398,7 @@ let PROJECTS=[];
 const _isoD=(y,m,d)=>y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
 const _dim=(y,m)=>new Date(y,m+1,0).getDate();const _cap=d=>Math.min(Math.max(d,1),_dim(_cn.getFullYear(),_cn.getMonth()));
 let EVENTS=[];
+let VISITS=[];
 const BUDGET={annual:18,ytd:9.0,months:['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],target:[1.5,1.5,1.5,1.5,1.5,1.5,1.5,1.5,1.5,1.5,1.5,1.5],actual:[1.3,1.45,1.6,1.4,1.55,1.7,null,null,null,null,null,null],nowIdx:6};
 const _y=_cn.getFullYear(),_m=_cn.getMonth();
 let LEAVE=[];
@@ -2651,6 +2665,8 @@ function calMonthGrid(y,m,mode){
         const tip=hid?esc(e.by)+' is busy':esc(e.time)+' '+esc(e.title)+(e.who?' — '+esc(e.who):'');
         return `<div class="cal-ev ${hid?'ev-busy':(e.src==='outlook'?'outlook':'')}" title="${tip}" onclick="event.stopPropagation();openEvent(${gi})">${esc(e.time)} ${lbl}</div>`;}).join('');
       chips+=lv.map(l=>`<div class="cal-ev ${l.status==='approved'?'ev-lv':'ev-lvp'}" title="${esc(l.emp)} &middot; ${esc(l.type)} (${l.status})">${esc(l.emp)} — ${l.status==='approved'?'leave':'leave (pending)'}</div>`).join('');
+      const vts=VISITS.map((v,gi)=>({v,gi})).filter(o=>o.v.date===ds);
+      chips+=vts.map(({v,gi})=>{const st=v.status||'appointed';const cls=st==='completed'?'ev-visit-done':(st==='cancelled'?'ev-visit-cx':'ev-visit');const tm=(v.time||'').slice(0,5);const tip='Customer visit'+(st==='cancelled'?' (cancelled)':(st==='completed'?' (completed)':''))+' — '+v.company+(v.sales?' · '+v.sales:'')+(tm?' · '+tm:'');return `<div class="cal-ev ${cls}" title="${esc(tip)}" onclick="event.stopPropagation();openVisit(${gi})">${st==='completed'?'✓ ':''}${tm?esc(tm)+' ':''}${esc(v.company)}</div>`;}).join('');
     }
     const click=mode==='leave'?'':` onclick="addEventOn('${ds}')"`;
     cells+=`<div class="cal-cell${ds===todayStr?' today':''}${hol.length?' holiday':''}"${click}><div class="cal-dn">${dd}</div>${chips}</div>`;}
@@ -2664,7 +2680,7 @@ function viewCalendarTab(){
   return `<div class="mod-intro"><div class="row-between" style="flex-wrap:wrap;gap:10px"><p>Everyone's schedule in one place — meetings, approved leave, public holidays and birthdays. Click a day to add an appointment. Tick <b>Private</b> and the rest of the team only sees that you are busy.</p><div style="display:flex;gap:8px;align-items:center">${gear}<button class="btn-primary btn" onclick="addEventOn('${todayStr}')">+ Add appointment</button></div></div></div>
     <div class="cal-top"><div class="cal-title">${monthName}</div><div class="cal-nav"><button class="nav-btn" onclick="prevMonth()"><span class="ar">&lsaquo;</span>Prev</button><button class="nav-btn now" onclick="thisMonth()">Today</button><button class="nav-btn" onclick="nextMonth()">Next<span class="ar">&rsaquo;</span></button></div></div>
     <div class="cal-grid">${calMonthGrid(calY,calM,'work')}</div>
-    <div class="wc-legend"><span><i style="background:var(--accent-soft);border:1px solid var(--accent)"></i>Appointment</span><span><i style="background:var(--surface-3);border:1px solid var(--line)"></i>Private &mdash; busy</span><span><i style="background:var(--ok-soft)"></i>Approved leave</span><span><i style="background:var(--warn-soft)"></i>Leave pending</span><span><i style="background:#FDECEC"></i>Public holiday</span><span><i style="background:#FFF4E0"></i>Birthday</span></div>`;
+    <div class="wc-legend"><span><i style="background:var(--accent-soft);border:1px solid var(--accent)"></i>Appointment</span><span><i style="background:var(--surface-3);border:1px solid var(--line)"></i>Private &mdash; busy</span><span><i style="background:var(--ok-soft)"></i>Approved leave</span><span><i style="background:var(--warn-soft)"></i>Leave pending</span><span><i style="background:#FDECEC"></i>Public holiday</span><span><i style="background:#FFF4E0"></i>Birthday</span><span><i style="background:#EDE9FE"></i>Customer visit</span><span><i style="background:#DDD6FE"></i>Visit completed</span><span><i style="background:#F1F1F4"></i>Visit cancelled</span></div>`;
 }
 function viewLeaveTab(){
   const rows=LEAVE.slice().sort((a,b)=>(b.from||'').localeCompare(a.from||'')).map(l=>{const i=LEAVE.indexOf(l);const days=leaveDays(l);
@@ -2697,6 +2713,20 @@ function addEventOn(ds){_pendDate=ds;
     {name:'priv',label:'Private appointment',type:'checkbox',hint:'Everyone still sees that you are busy at this time, but not what it is.'}],async v=>{
     const r=await dbAdd('events',{date:v.date||_pendDate,time:v.time||'',title:v.title,who:v.who||'',src:'app',priv:!!v.priv});
     if(r)EVENTS.push(r);});}
+function _visitStatusLabel(st){return st==='completed'?'Completed':(st==='cancelled'?'Cancelled':'Appointed');}
+function openVisit(i){const v=VISITS[i];if(!v)return;
+  resetModalShell();modalSave=null;modalFields=[];
+  document.getElementById('modalTitle').textContent='Customer visit';
+  const tm=(v.time||'').slice(0,5);
+  const rows=[['Customer',v.company||'—'],['Date',(v.date||'—')+(tm?' · '+tm:'')]];
+  if(v.sales)rows.push(['Sales',v.sales]);
+  rows.push(['Status',_visitStatusLabel(v.status)]);
+  if(v.address)rows.push(['Address',v.address]);
+  if(v.objective)rows.push(['Objective',v.objective]);
+  if(v.summary)rows.push(['Summary',v.summary]);
+  document.getElementById('modalBody').innerHTML='<div style="font-size:12.5px;color:var(--muted);margin-bottom:10px">Logged in the Sales CRM &middot; shown here read-only</div>'+rows.map(function(kv){return '<div style="padding:8px 0;border-top:1px solid var(--line)"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--faint);margin-bottom:3px">'+esc(kv[0])+'</div><div style="font-size:13.5px;color:var(--ink);white-space:pre-wrap">'+esc(kv[1])+'</div></div>';}).join('');
+  const b=document.querySelector('#modalOv .modal-f .btn-primary');if(b){b.setAttribute('onclick','closeModal()');b.innerHTML='Close';}
+  document.getElementById('modalOv').classList.add('show');}
 
 /* --- small settings button: approved annual holidays + broadcast notices --- */
 function openCalSettings(){
