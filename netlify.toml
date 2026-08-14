@@ -7,13 +7,15 @@
   from = "/mplthcrm"
   to = "/MPLCRM.html"
   status = 200
-
 [[redirects]]
   from = "/mplthquote"
   to = "/mplquote.html"
   status = 200
-
 [[redirects]]
   from = "/mplthexec"
   to = "/Execwork.html"
+  status = 200
+[[redirects]]
+  from = "/deckstudio"
+  to = "/Deckstudio.html"
   status = 200
