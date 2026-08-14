@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sales Deck Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0F172A; --blue:#2563EB; --blue-dark:#1D4ED8; --wash:#EFF6FF;
+  --line:#E2E8F0; --muted:#64748B; --bg:#F8FAFC; --white:#FFFFFF;
+  --green:#059669; --amber:#D97706; --red:#DC2626; --radius:12px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);font-size:14px}
+button{font-family:inherit;cursor:pointer;border:none;background:none}
+input,select{font-family:inherit;font-size:13px}
+
+/* ===== Top bar ===== */
+.topbar{height:56px;background:var(--white);border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 20px;gap:14px;position:sticky;top:0;z-index:50}
+.brand{font-family:'Poppins',sans-serif;font-weight:600;font-size:17px;display:flex;align-items:center;gap:6px}
+.brand .chev{color:var(--blue);font-weight:700}
+.brand .tag{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);background:var(--wash);border:1px solid #DBEAFE;padding:2px 8px;border-radius:99px;margin-left:4px}
+.tabs{display:flex;gap:4px;margin-left:10px}
+.tab{padding:7px 14px;border-radius:8px;font-weight:600;font-size:13px;color:var(--muted)}
+.tab.on{background:var(--wash);color:var(--blue)}
+.topbar .spacer{flex:1}
+.role-toggle{display:flex;background:var(--bg);border:1px solid var(--line);border-radius:99px;padding:3px}
+.role-toggle button{padding:5px 14px;border-radius:99px;font-weight:600;font-size:12px;color:var(--muted)}
+.role-toggle button.on{background:var(--ink);color:#fff}
+.btn{padding:8px 16px;border-radius:8px;font-weight:600;font-size:13px;transition:all .15s}
+.btn-primary{background:var(--blue);color:#fff}
+.btn-primary:hover{background:var(--blue-dark)}
+.btn-ghost{color:var(--ink);border:1px solid var(--line);background:var(--white)}
+.btn-ghost:hover{border-color:var(--blue);color:var(--blue)}
+.btn-sm{padding:5px 10px;font-size:11.5px;border-radius:7px}
+
+/* ===== Builder layout ===== */
+.app{display:grid;grid-template-columns:270px 1fr 300px;height:calc(100vh - 56px)}
+@media(max-width:1100px){.app{grid-template-columns:230px 1fr}.library{display:none}}
+@media(max-width:760px){.app{display:block;height:auto}.structure{border-right:none;border-bottom:1px solid var(--line)}}
+.structure{background:var(--white);border-right:1px solid var(--line);overflow-y:auto;padding:20px 16px}
+.panel-title{font-family:'Poppins',sans-serif;font-weight:600;font-size:13px;margin-bottom:4px}
+.panel-sub{font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.5}
+.legend{display:flex;gap:14px;margin-bottom:14px;font-size:11px;color:var(--muted)}
+.legend span{display:flex;align-items:center;gap:5px}
+.dot{width:8px;height:8px;border-radius:2px;display:inline-block}
+.dot.f{background:var(--ink)} .dot.s{background:var(--blue)}
+.slot{display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:10px;border:1px solid var(--line);margin-bottom:7px;cursor:pointer;transition:all .15s;background:var(--white)}
+.slot:hover{border-color:#BFDBFE}
+.slot.active{border-color:var(--blue);background:var(--wash);box-shadow:0 0 0 1px var(--blue)}
+.slot .bar{width:4px;height:26px;border-radius:2px;flex-shrink:0}
+.slot.fixed .bar{background:var(--ink)} .slot.swap .bar{background:var(--blue)}
+.slot .info{flex:1;min-width:0}
+.slot .name{font-weight:600;font-size:12.5px}
+.slot .type{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.slot.swap .type{color:var(--blue)}
+.slot .num{font-size:11px;color:var(--muted);font-weight:600;width:14px;text-align:right}
+.slot .clip{font-size:11px}
+
+.canvas{overflow-y:auto;padding:22px 26px;display:flex;flex-direction:column;gap:16px}
+.industry-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.industry-label{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.pill{padding:7px 15px;border-radius:99px;border:1px solid var(--line);background:var(--white);font-weight:600;font-size:13px;transition:all .15s;display:flex;align-items:center;gap:6px}
+.pill:hover{border-color:var(--blue)}
+.pill.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+
+.preview-wrap{background:var(--white);border:1px solid var(--line);border-radius:var(--radius);padding:18px;box-shadow:0 1px 3px rgba(15,23,42,.05)}
+.preview-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:8px;flex-wrap:wrap}
+.preview-head .t{font-family:'Poppins',sans-serif;font-weight:600;font-size:14px}
+.badge{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 10px;border-radius:99px}
+.badge.f{background:#F1F5F9;color:var(--ink)}
+.badge.s{background:var(--wash);color:var(--blue)}
+.slide{aspect-ratio:16/9;border-radius:10px;overflow:hidden;position:relative;border:1px solid var(--line)}
+.slide-inner{position:absolute;inset:0;padding:5.5% 6.5%;display:flex;gap:5%;transition:opacity .25s}
+.slide-inner.fade{opacity:0}
+.s-col{flex:1;display:flex;flex-direction:column;justify-content:center;min-width:0}
+.s-mediacol{width:38%;display:flex;align-items:center;justify-content:center}
+.s-mediacol img{width:100%;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.18);object-fit:cover;aspect-ratio:4/3}
+.s-mediacol iframe{width:100%;aspect-ratio:16/10;border:none;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.18)}
+.s-eyebrow{font-size:.85em;font-weight:700;letter-spacing:.12em;text-transform:uppercase;margin-bottom:.7em}
+.s-title{font-family:'Poppins',sans-serif;font-weight:700;line-height:1.15;margin-bottom:.6em}
+.s-body{line-height:1.55;opacity:.85}
+.s-body li{margin-bottom:.4em;list-style:none;padding-left:1.2em;position:relative}
+.s-body li::before{content:'▸';position:absolute;left:0;opacity:.6}
+.s-stat{display:flex;gap:2.2em;margin-top:1em}
+.s-stat b{font-family:'Poppins',sans-serif;font-size:1.8em;display:block;line-height:1}
+.s-stat span{font-size:.78em;opacity:.7}
+.s-foot{position:absolute;bottom:4.5%;left:6.5%;right:6.5%;display:flex;justify-content:space-between;font-size:.72em;opacity:.5}
+.canvas-font{font-size:clamp(8px,1.55vw,15px)}
+
+.filmstrip{display:flex;gap:10px;overflow-x:auto;padding-bottom:6px}
+.thumb{flex-shrink:0;width:145px;cursor:pointer}
+.thumb .mini{aspect-ratio:16/9;border-radius:8px;border:2px solid var(--line);overflow:hidden;position:relative;transition:all .15s;background:var(--white)}
+.thumb.on .mini{border-color:var(--blue);box-shadow:0 0 0 2px #BFDBFE}
+.thumb .mini-inner{position:absolute;inset:0;padding:8% 9%;display:flex;flex-direction:column;justify-content:center}
+.thumb .mt{font-family:'Poppins',sans-serif;font-weight:700;font-size:8px;line-height:1.2;margin-bottom:3px}
+.thumb .me{font-size:5.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:3px}
+.thumb .ml{font-size:5.5px;line-height:1.5;opacity:.8}
+.thumb .label{margin-top:5px;font-size:10.5px;font-weight:600;color:var(--muted);display:flex;align-items:center;gap:5px}
+.thumb .label .dot{width:6px;height:6px}
+
+.library{background:var(--white);border-left:1px solid var(--line);overflow-y:auto;padding:20px 16px}
+.block-card{border:1px solid var(--line);border-radius:10px;padding:11px;margin-bottom:9px;cursor:pointer;transition:all .15s}
+.block-card:hover{border-color:#BFDBFE;background:#FAFCFF}
+.block-card.on{border-color:var(--blue);background:var(--wash)}
+.block-card .bt{font-weight:600;font-size:12.5px;margin-bottom:3px}
+.block-card .bd{font-size:11.5px;color:var(--muted);line-height:1.5}
+.block-card .bind{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--blue);margin-bottom:4px}
+.lib-note{font-size:11.5px;color:var(--muted);background:var(--bg);border:1px dashed var(--line);border-radius:8px;padding:10px 12px;line-height:1.55;margin-top:12px}
+
+/* ===== Media Library page ===== */
+.media-page{max-width:1080px;margin:0 auto;padding:26px 22px}
+.media-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:8px}
+.media-head h1{font-family:'Poppins',sans-serif;font-size:20px;font-weight:600}
+.media-head p{color:var(--muted);font-size:13px;margin-top:4px;max-width:560px;line-height:1.55}
+.gov-strip{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0 20px}
+.gov{flex:1;min-width:200px;background:var(--white);border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:12px;line-height:1.55;color:var(--muted)}
+.gov b{color:var(--ink);display:block;margin-bottom:2px;font-size:12.5px}
+.add-box{background:var(--white);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:22px}
+.add-box .row{display:flex;gap:10px;flex-wrap:wrap}
+.add-box input[type=text]{flex:1;min-width:220px;padding:9px 12px;border:1px solid var(--line);border-radius:8px}
+.add-box input:focus{outline:2px solid #BFDBFE;border-color:var(--blue)}
+.add-box select{padding:9px 12px;border:1px solid var(--line);border-radius:8px;background:var(--white)}
+.add-hint{font-size:11.5px;color:var(--muted);margin-top:8px;line-height:1.5}
+.locked{background:var(--bg);border:1px dashed var(--line);border-radius:var(--radius);padding:14px 16px;font-size:12.5px;color:var(--muted);margin-bottom:22px;display:flex;gap:10px;align-items:center;line-height:1.5}
+.media-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px}
+.mcard{background:var(--white);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;transition:all .15s}
+.mcard:hover{box-shadow:0 4px 14px rgba(15,23,42,.08)}
+.mcard .mthumb{aspect-ratio:16/10;background:#F1F5F9;position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.mcard .mthumb img{width:100%;height:100%;object-fit:cover}
+.mcard .mthumb .ph{font-size:34px;opacity:.9}
+.mcard .mthumb .vtag{position:absolute;bottom:8px;right:8px;background:rgba(15,23,42,.8);color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px}
+.mcard .mbody{padding:11px 12px}
+.mcard .mname{font-weight:600;font-size:12.5px;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mcard .mmeta{font-size:10.5px;color:var(--muted);display:flex;align-items:center;gap:6px;margin-bottom:9px}
+.st{font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 8px;border-radius:99px}
+.st.approved{background:#ECFDF5;color:var(--green)}
+.st.pending{background:#FFFBEB;color:var(--amber)}
+.mcard .macts{display:flex;gap:6px;flex-wrap:wrap}
+.chip-src{font-size:10px;color:var(--muted)}
+
+/* ===== Present ===== */
+.present{position:fixed;inset:0;background:#000;z-index:100;display:none;flex-direction:column}
+.present.show{display:flex}
+.present .stage{flex:1;display:flex;align-items:center;justify-content:center;padding:3vh 4vw}
+.present .slide{width:min(92vw,calc(88vh*16/9));aspect-ratio:16/9;border:none;font-size:calc(min(92vw,88vh*16/9)/46)}
+.present .ctrl{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);display:flex;gap:8px;align-items:center;background:rgba(15,23,42,.85);backdrop-filter:blur(8px);padding:8px 14px;border-radius:99px;color:#fff}
+.present .ctrl button{color:#fff;font-size:16px;padding:4px 10px;border-radius:8px}
+.present .ctrl button:hover{background:rgba(255,255,255,.15)}
+.present .ctrl .pg{font-size:12px;font-weight:600;opacity:.8;padding:0 6px}
+.present .close{position:fixed;top:16px;right:20px;color:#fff;font-size:13px;font-weight:600;padding:8px 14px;border-radius:8px;background:rgba(255,255,255,.12)}
+.present .close:hover{background:rgba(255,255,255,.22)}
+
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--ink);color:#fff;padding:11px 20px;border-radius:10px;font-size:13px;font-weight:500;transition:transform .25s;z-index:200;max-width:90vw}
+.toast.show{transform:translateX(-50%) translateY(0)}
+
+/* Slot editing */
+.slot{position:relative}
+.slot .del{position:absolute;top:6px;right:6px;font-size:10px;color:var(--muted);padding:2px 5px;border-radius:5px;opacity:.45}
+.slot .del:hover{background:#FEE2E2;color:var(--red);opacity:1}
+.slot.custom .bar{background:var(--amber)}
+.slot.custom .type{color:var(--amber)}
+.dot.c{background:var(--amber)}
+.addslot input,.addslot select{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;margin-bottom:6px}
+.addslot input:focus{outline:2px solid #BFDBFE;border-color:var(--blue)}
+
+/* Presentation library cards */
+.pcard{background:var(--white);border:1px solid var(--line);border-radius:var(--radius);padding:16px;transition:all .15s}
+.pcard:hover{box-shadow:0 4px 14px rgba(15,23,42,.08)}
+.pcard .pc-cust{font-family:'Poppins',sans-serif;font-weight:600;font-size:14px;margin-bottom:2px}
+.pcard .pc-meta{font-size:11.5px;color:var(--muted);margin-bottom:10px;line-height:1.6}
+.pcard .pc-size{display:inline-block;background:#ECFDF5;color:var(--green);font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;letter-spacing:.04em}
+.pcard .pc-strip{display:flex;gap:3px;margin:10px 0 12px}
+.pcard .pc-strip i{flex:1;height:5px;border-radius:2px;background:#E2E8F0}
+.pcard .pc-strip i.f{background:var(--ink)} .pcard .pc-strip i.s{background:var(--blue)} .pcard .pc-strip i.c{background:var(--amber)}
+.pcard .macts{display:flex;gap:6px;flex-wrap:wrap}
+
+/* AI modal */
+.modal-bg{position:fixed;inset:0;background:rgba(15,23,42,.55);backdrop-filter:blur(3px);z-index:150;display:flex;align-items:center;justify-content:center;padding:16px}
+.modal{background:var(--white);border-radius:16px;width:100%;max-width:520px;max-height:92vh;overflow-y:auto;padding:24px}
+.modal h2{font-family:'Poppins',sans-serif;font-size:17px;font-weight:600;margin-bottom:4px}
+.modal .msub{font-size:12.5px;color:var(--muted);margin-bottom:18px;line-height:1.55}
+.fld{margin-bottom:12px}
+.fld label{display:block;font-size:12px;font-weight:600;margin-bottom:5px}
+.fld label .req{color:var(--red)}
+.fld input,.fld select,.fld textarea{width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;background:#fff;font-family:inherit}
+.fld input:focus,.fld textarea:focus,.fld select:focus{outline:2px solid #BFDBFE;border-color:var(--blue)}
+.fld textarea{min-height:70px;resize:vertical}
+.fld .err{border-color:var(--red);outline:2px solid #FECACA}
+.checks{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.checks label{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:500;border:1px solid var(--line);border-radius:8px;padding:8px 10px;cursor:pointer;margin:0}
+.checks label:has(input:checked){border-color:var(--blue);background:var(--wash)}
+.modal .macts{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
+.ai-cost{font-size:11px;color:var(--muted);background:var(--bg);border-radius:8px;padding:8px 10px;margin-top:12px;line-height:1.55}
+
+/* AI loading */
+.ai-loading{position:fixed;inset:0;background:rgba(15,23,42,.92);z-index:180;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;gap:18px}
+.ai-loading .spin{width:44px;height:44px;border:3px solid rgba(255,255,255,.2);border-top-color:#60A5FA;border-radius:50%;animation:sp 0.9s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.ai-loading .step{font-size:14px;font-weight:500;opacity:.9}
+.ai-loading .mini{font-size:11.5px;opacity:.5}
+.hidden{display:none!important}
+@media(max-width:760px){.canvas{padding:16px}.structure{padding:16px}.tabs{margin-left:0}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">Sales Deck<span class="chev">›</span>Studio</div>
+  <div class="tabs">
+    <button class="tab on" id="tabBuilder" onclick="setView('builder')">Builder</button>
+    <button class="tab" id="tabMedia" onclick="setView('media')">Media Library</button>
+    <button class="tab" id="tabPresents" onclick="setView('presents')">Presentations</button>
+  </div>
+  <div class="spacer"></div>
+  <div class="role-toggle">
+    <button id="roleManager" class="on" onclick="setRole('manager')">Manager</button>
+    <button id="roleSales" onclick="setRole('sales')">Sales</button>
+  </div>
+  <button class="btn btn-ghost" onclick="openAI()" style="border-color:#C7D2FE;color:#4F46E5;display:inline-flex;align-items:center;gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M11 2l1.7 6.3L19 10l-6.3 1.7L11 18l-1.7-6.3L3 10l6.3-1.7z"/><path d="M18.5 13.5l.7 2.3L21.5 16.5l-2.3.7L18.5 19.5l-.7-2.3L15.5 16.5l2.3-.7z"/></svg>AI Deck</button>
+  <button class="btn btn-ghost" onclick="saveDeck()">Save</button>
+  <button class="btn btn-primary" onclick="openPresent()">▶ Present</button>
+</div>
+
+<!-- ================= BUILDER VIEW ================= -->
+<div class="app" id="viewBuilder">
+  <aside class="structure">
+    <div class="panel-title">Master Structure</div>
+    <div class="panel-sub">One fixed backbone. 📎 = approved media attached.</div>
+    <div class="legend">
+      <span><i class="dot f"></i>Fixed</span>
+      <span><i class="dot s"></i>Swappable</span>
+      <span><i class="dot c"></i>Custom</span>
+    </div>
+    <div id="slotList"></div>
+    <div class="addslot">
+      <button class="btn btn-ghost btn-sm" style="width:100%" onclick="toggleAddSlot()">＋ Add slide</button>
+      <div id="addSlotForm" class="hidden" style="margin-top:8px">
+        <select id="newSlotPreset" onchange="onPresetChange()">
+          <option value="__custom">Custom slide…</option>
+          <option value="video">Company Video</option>
+          <option value="cert">Certifications &amp; Awards</option>
+          <option value="trial">Trial Proposal</option>
+          <option value="qa">Q &amp; A</option>
+        </select>
+        <input type="text" id="newSlotName" placeholder="Slide name">
+        <button class="btn btn-primary btn-sm" style="width:100%" onclick="addSlot()">Insert after selected slide</button>
+      </div>
+    </div>
+  </aside>
+
+  <main class="canvas">
+    <div class="industry-row">
+      <span class="industry-label">Industry</span>
+      <div id="pills" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+    </div>
+    <div class="preview-wrap">
+      <div class="preview-head">
+        <span class="t" id="pvTitle">Slide</span>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="btn btn-ghost btn-sm" id="btnDetach" onclick="detachMedia()">Remove media</button>
+          <span class="badge f" id="pvBadge">Fixed</span>
+        </div>
+      </div>
+      <div class="slide"><div class="slide-inner canvas-font" id="pvSlide"></div></div>
+    </div>
+    <div>
+      <div class="panel-title" style="margin-bottom:10px">Deck — <span id="deckMeta"></span></div>
+      <div class="filmstrip" id="filmstrip"></div>
+    </div>
+  </main>
+
+  <aside class="library">
+    <div class="panel-title">Content Blocks</div>
+    <div class="panel-sub" id="libSub"></div>
+    <div id="libList"></div>
+    <div class="panel-title" style="margin:16px 0 6px">Approved Media</div>
+    <div class="panel-sub">Company-approved only. Tap to place on this slide.</div>
+    <div id="quickMedia"></div>
+    <div class="lib-note"><b>Governance:</b> Sales can only use media the Manager has uploaded and approved. Files are stored on Cloudflare R2 (free egress) — the database keeps only the reference URL.</div>
+  </aside>
+</div>
+
+<!-- ================= MEDIA LIBRARY VIEW ================= -->
+<div class="media-page hidden" id="viewMedia">
+  <div class="media-head">
+    <div>
+      <h1>Approved Media Library</h1>
+      <p>Single source of truth for all sales media. Files are stored on Cloudflare R2 — uploaded directly from the app, with free egress when presenting to customers.</p>
+    </div>
+  </div>
+
+  <div class="gov-strip">
+    <div class="gov"><b>1 · Manager uploads</b>Pick an image or video → uploads straight to R2 via the Worker. No keys are ever exposed in the browser.</div>
+    <div class="gov"><b>2 · Approve once</b>Only approved items become visible to the sales team.</div>
+    <div class="gov"><b>3 · Reuse forever</b>One file, unlimited decks. R2 egress is free — stream a video any number of times at no cost.</div>
+  </div>
+
+  <!-- Manager-only add box -->
+  <div class="add-box" id="addBox">
+    <div class="panel-title" style="margin-bottom:10px">Upload media to Cloudflare R2 <span class="badge s" style="margin-left:6px">Manager only</span></div>
+    <div class="row">
+      <input type="file" id="inFile" accept="image/*,video/*" style="flex:1;min-width:220px;padding:9px 12px;border:1px solid var(--line);border-radius:8px;background:#fff">
+      <input type="text" id="inName" placeholder="Display name (blank = use file name)" style="max-width:220px">
+      <button class="btn btn-primary" id="btnUpload" onclick="addMedia()">⬆ Upload to R2</button>
+    </div>
+    <div class="add-hint">Choose an image or video → it uploads directly to Cloudflare R2 via the Worker (keys never exposed in the browser). Uploaded files are auto-approved and available to the whole team.</div>
+  </div>
+  <div class="locked hidden" id="lockedBox">🔒 <span><b>Sales view:</b> adding or deleting media is disabled. You can use approved items in the Builder. Need something new? Request it from your manager.</span></div>
+
+  <div class="media-grid" id="mediaGrid"></div>
+</div>
+
+<!-- ================= PRESENTATION LIBRARY VIEW ================= -->
+<div class="media-page hidden" id="viewPresents">
+  <div class="media-head">
+    <div>
+      <h1>Presentation Library</h1>
+      <p>Every deck is saved as a lightweight <b>outline only</b> — slide order, chosen blocks, customer info, and media URLs. No files are duplicated, so a thousand decks weigh less than one photo.</p>
+    </div>
+  </div>
+  <div class="media-grid" id="presentGrid" style="grid-template-columns:repeat(auto-fill,minmax(260px,1fr))"></div>
+</div>
+
+<!-- ================= AI MODAL ================= -->
+<div class="modal-bg hidden" id="aiModal">
+  <div class="modal">
+    <h2 style="display:flex;align-items:center;gap:8px"><svg width="18" height="18" viewBox="0 0 24 24" fill="#4F46E5"><path d="M11 2l1.7 6.3L19 10l-6.3 1.7L11 18l-1.7-6.3L3 10l6.3-1.7z"/><path d="M18.5 13.5l.7 2.3L21.5 16.5l-2.3.7L18.5 19.5l-.7-2.3L15.5 16.5l2.3-.7z"/></svg>New Deck with AI</h2>
+    <div class="msub">Fill in the customer brief (required fields enforced — this is your team's SOP). Claude arranges the master structure, picks the right industry blocks, and drafts a customer-specific slide.</div>
+    <div class="fld"><label>Customer Name <span class="req">*</span></label><input id="aiName" placeholder="e.g. ABC Manufacturing Co., Ltd."></div>
+    <div class="fld"><label>Address <span class="req">*</span></label><input id="aiAddr" placeholder="e.g. Amata City, Chonburi"></div>
+    <div class="fld"><label>Industry <span class="req">*</span></label>
+      <select id="aiInd">
+        <option value="auto">🚗 Automotive</option><option value="food">🥫 Food &amp; Beverage</option>
+        <option value="elec">💾 Electronics</option><option value="ecom">📦 E-commerce</option>
+      </select>
+    </div>
+    <div class="fld"><label>Sizing (est. volume) <span class="req">*</span></label>
+      <select id="aiSize">
+        <option>Small — under 10 TEU / month</option>
+        <option>Medium — 10–50 TEU / month</option>
+        <option>Large — 50+ TEU / month or airfreight program</option>
+      </select>
+    </div>
+    <div class="fld"><label>Pain Points (if any)</label><textarea id="aiPain" placeholder="e.g. current forwarder often late, no shipment visibility, high demurrage charges"></textarea></div>
+    <div class="fld"><label>Specific slides (general SOP)</label>
+      <div class="checks">
+        <label><input type="checkbox" id="sopCase" checked> Case Study</label>
+        <label><input type="checkbox" id="sopPrice" checked> Pricing Structure</label>
+        <label><input type="checkbox" id="sopTrial" checked> Trial Proposal</label>
+        <label><input type="checkbox" id="sopVideo"> Company Video</label>
+      </div>
+    </div>
+    <div class="ai-cost">💡 <b>Cost estimate:</b> AI receives only this brief + block metadata (no files, no images) and returns an outline referencing block IDs. ≈ 4,000–5,000 tokens ≈ <b>฿0.3–0.5 per deck</b> with Claude Haiku.</div>
+    <div class="macts">
+      <button class="btn btn-ghost" onclick="closeAI()">Cancel</button>
+      <button class="btn btn-primary" onclick="generateAI()">Generate deck</button>
+    </div>
+  </div>
+</div>
+
+<div class="ai-loading hidden" id="aiLoading">
+  <div class="spin"></div>
+  <div class="step" id="aiStep">Reading customer brief…</div>
+  <div class="mini">Claude Haiku · outline only · no files sent</div>
+</div>
+
+<!-- PRESENT -->
+<div class="present" id="present">
+  <button class="close" onclick="closePresent()">✕ Exit</button>
+  <div class="stage"><div class="slide"><div class="slide-inner" id="prSlide"></div></div></div>
+  <div class="ctrl">
+    <button onclick="nav(-1)">‹</button>
+    <span class="pg" id="prPg">1 / 8</span>
+    <button onclick="nav(1)">›</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============ R2 CONFIG ============ */
+/* Paste your Worker URL here after deploying the Worker (e.g. https://deckstudio-upload.xxx.workers.dev) */
+const WORKER_URL = "https://deckstudio-upload.thearavich-t.workers.dev";
+
+/* ============ CONTENT & SEED DATA ============ */
+const INDUSTRIES = [
+  {id:'auto', name:'Automotive', ic:'🚗', accent:'#B45309'},
+  {id:'food', name:'Food & Beverage', ic:'🥫', accent:'#047857'},
+  {id:'elec', name:'Electronics', ic:'💾', accent:'#6D28D9'},
+  {id:'ecom', name:'E-commerce', ic:'📦', accent:'#BE185D'},
+];
+const EXTRA = {
+  video:{name:'Company Video',content:{eyebrow:'Inside Our Operation',title:'See How We Move Your Cargo',body:['3-minute corporate video','Attach the approved video from Media Library →'],theme:'navy'}},
+  cert:{name:'Certifications & Awards',content:{eyebrow:'Trust & Compliance',title:'Certified to Global Standards',body:['ISO 9001:2015 · AEO certified','IATA cargo agent · FIATA member','TIFFA member since 2005'],theme:'white'}},
+  trial:{name:'Trial Proposal',content:{eyebrow:'Low-Risk Start',title:'30-Day Trial Program',body:['One lane, full service, real comparison','Dedicated CS + daily status updates','No long-term commitment required'],theme:'wash'}},
+  qa:{name:'Q & A',content:{eyebrow:'Discussion',title:'Questions & Answers',body:['Open floor for your team','Contact: sales@yourcompany.com'],theme:'navy'}},
+};
+let SLOTS = [
+  {id:'cover',name:'Cover',type:'fixed'},
+  {id:'profile',name:'Company Profile',type:'fixed'},
+  {id:'pain',name:'Industry Pain Points',type:'swap'},
+  {id:'solution',name:'Our Solution',type:'swap'},
+  {id:'case',name:'Case Study',type:'swap'},
+  {id:'coverage',name:'Service Coverage',type:'fixed'},
+  {id:'pricing',name:'Pricing Structure',type:'fixed'},
+  {id:'closing',name:'Next Steps',type:'fixed'},
+];
+const FIXED = {
+  cover:{eyebrow:'Freight Forwarding & Logistics',title:'Moving Your Business Forward',body:['Prepared for: {CUSTOMER}','Presented by: Sales Team'],theme:'navy'},
+  profile:{eyebrow:'Who We Are',title:'20+ Years in Global Logistics',body:['Full-service freight forwarder — sea, air, cross-border trucking','Licensed customs broker with e-Customs integration','Bangkok · Laem Chabang · 40+ agent countries'],stats:[['1,200+','TEU / month'],['40+','Agent countries'],['98.4%','On-time rate']],theme:'white'},
+  coverage:{eyebrow:'Network',title:'Door-to-Door, Anywhere',body:['Sea freight: FCL / LCL on all major trade lanes','Air freight: priority uplift, BKK consolidations','Cross-border: TH–MY–SG, TH–LA–VN corridors','Customs, bonded warehouse, last-mile'],theme:'white'},
+  pricing:{eyebrow:'Commercial',title:'Transparent Pricing Structure',body:['All-in quotations — no hidden local charges','Quarterly rate agreements for stable volume','Credit terms for qualified accounts','Dedicated CS with weekly reports'],theme:'white'},
+  closing:{eyebrow:'Next Steps',title:'Let\u2019s Run a Trial Shipment',body:['Pilot shipment on your busiest lane','Side-by-side cost & transit comparison in 30 days','Your dedicated team starts this week'],theme:'navy'},
+};
+const LIB = {
+  pain:{
+    auto:[{t:'Just-in-time pressure',d:'Production deadlines & JIT windows',slide:{eyebrow:'Automotive — Challenges',title:'When One Late Container Stops the Line',body:['JIT production leaves zero buffer for delays','Penalty clauses for late delivery','DG & packaging compliance for parts'],theme:'white'}},
+         {t:'EV supply chain shift',d:'Battery logistics & new lanes',slide:{eyebrow:'Automotive — Challenges',title:'The EV Shift Is Rewriting Your Supply Chain',body:['Lithium batteries need certified DG handling','New sourcing lanes add complexity','Volatile volumes make fixed contracts risky'],theme:'white'}}],
+    food:[{t:'Cold chain & shelf life',d:'Temperature & expiry pressure',slide:{eyebrow:'F&B — Challenges',title:'Every Day in Transit Is Shelf Life Lost',body:['Reefer capacity tight in peak season','FDA / import permits delay clearance','Temperature excursions = full-container losses'],theme:'white'}}],
+    elec:[{t:'High value, high risk',d:'Security & damage-sensitive cargo',slide:{eyebrow:'Electronics — Challenges',title:'High-Value Cargo Can\u2019t Afford Surprises',body:['Theft & damage risk on high-value loads','Static / moisture-sensitive handling','Launch timelines demand guaranteed uplift'],theme:'white'}}],
+    ecom:[{t:'Speed & volume swings',d:'Campaign peaks & speed',slide:{eyebrow:'E-commerce — Challenges',title:'Campaign Peaks Break Rigid Supply Chains',body:['11.11 / 12.12 spikes overwhelm capacity','Ever-faster delivery promises','Returns eat into margins'],theme:'white'}}],
+  },
+  solution:{
+    auto:[{t:'JIT-grade solution',d:'Milestone tracking + priority uplift',slide:{eyebrow:'Our Solution',title:'Built for Production-Line Precision',body:['Milestone tracking with exception alerts','Priority air uplift as contingency','DG-certified team for battery parts'],stats:[['99.1%','JIT delivery'],['<2 hrs','Alert response']],theme:'wash'}}],
+    food:[{t:'Cold chain solution',d:'Reefer allocation + permit desk',slide:{eyebrow:'Our Solution',title:'Cold Chain, Fully Managed',body:['Guaranteed reefer allocation','In-house FDA permit desk','Door-to-door temperature reports'],stats:[['100%','Temp compliance'],['-2 days','Clearance time']],theme:'wash'}}],
+    elec:[{t:'Secure lane solution',d:'Security protocol + fast lanes',slide:{eyebrow:'Our Solution',title:'Secure, Fast, Launch-Ready',body:['Sealed & monitored handling','ESD-compliant packaging guidance','Guaranteed uplift for launches'],stats:[['0','Loss incidents 2025'],['48 hr','BKK–SIN express']],theme:'wash'}}],
+    ecom:[{t:'Elastic capacity',d:'Flex volume + returns handling',slide:{eyebrow:'Our Solution',title:'Capacity That Flexes With Your Campaigns',body:['Elastic space for peak seasons','Consolidation cuts per-unit cost','Reverse logistics lane for returns'],stats:[['+300%','Peak flex'],['-18%','Unit freight cost']],theme:'wash'}}],
+  },
+  case:{
+    auto:[{t:'Tier-1 parts maker',d:'TH → MX lane, 14% saving',slide:{eyebrow:'Case Study — Automotive',title:'Tier-1 Supplier: Zero Line-Stops in 18 Months',body:['Challenge: delays on TH → Mexico lane','Action: dual-routing + milestone alerts','Result: 14% saving, zero production stops'],theme:'navy'}}],
+    food:[{t:'Frozen seafood exporter',d:'Reefer program to EU',slide:{eyebrow:'Case Study — F&B',title:'Frozen Exporter: 100% Cold Chain to the EU',body:['Challenge: temperature claims to EU','Action: dedicated reefer program + loggers','Result: zero claims across 240 containers'],theme:'navy'}}],
+    elec:[{t:'Components brand',d:'Launch airfreight program',slide:{eyebrow:'Case Study — Electronics',title:'Launch Delivered in 40 Countries, On Time',body:['Challenge: global launch, fixed street date','Action: multi-origin airfreight orchestration','Result: 100% launch-day availability'],theme:'navy'}}],
+    ecom:[{t:'Marketplace seller',d:'Peak season consolidation',slide:{eyebrow:'Case Study — E-commerce',title:'12.12 Peak: 3× Volume, Same Cost Per Unit',body:['Challenge: volume tripled overnight','Action: pre-booked elastic space','Result: all orders within SLA, cost flat'],theme:'navy'}}],
+  },
+};
+
+/* Approved media library — each item stores its R2 public URL (m.url) */
+let MEDIA = [];
+
+/* ============ STATE ============ */
+let role='manager', view='builder', industry='auto', activeSlot=0;
+let chosen={}, attachments={}, presentIdx=0;
+let CUSTOMER='ABC Manufacturing Co., Ltd.';
+let PRESENTS=[];
+
+/* ============ HELPERS ============ */
+function slideData(slot){
+  if(slot.type==='custom')return slot.content;
+  if(slot.type==='fixed')return FIXED[slot.id];
+  const v=LIB[slot.id][industry];
+  return v[Math.min(chosen[slot.id]||0,v.length-1)].slide;
+}
+function themeStyle(t,accent){
+  if(t==='navy')return{bg:'linear-gradient(135deg,#0F172A,#1E293B)',fg:'#fff',ac:'#60A5FA'};
+  if(t==='wash')return{bg:'linear-gradient(135deg,#EFF6FF,#DBEAFE)',fg:'#0F172A',ac:'#2563EB'};
+  return{bg:'#FFFFFF',fg:'#0F172A',ac:accent||'#2563EB'};
+}
+function mediaThumbUrl(m){
+  if(m.url&&m.type==='image')return m.url;
+  return null;
+}
+function mediaHtml(m,big){
+  if(m.type==='video'&&m.url)return'<video src="'+m.url+'" controls playsinline style="width:100%;aspect-ratio:16/10;border:none;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.18);background:#000;object-fit:cover"></video>';
+  if(m.url&&m.type==='image')return'<img src="'+m.url+'" alt="'+m.name+'">';
+  /* placeholder card when no real file yet */
+  return'<div style="width:100%;aspect-ratio:4/3;border-radius:8px;background:linear-gradient(135deg,#1E293B,#334155);display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;box-shadow:0 4px 16px rgba(0,0,0,.18)"><div style="font-size:2.6em">'+m.ph+'</div><div style="font-size:.75em;opacity:.75;margin-top:.4em">'+m.name+'</div><div style="font-size:.6em;opacity:.5;margin-top:.2em">from Cloudflare R2</div></div>';
+}
+function renderSlide(el,slot,big){
+  const d=slideData(slot);
+  const ind=INDUSTRIES.find(i=>i.id===industry);
+  const st=themeStyle(d.theme,slot.type==='swap'?ind.accent:null);
+  const body=(d.body||[]).map(b=>'<li>'+b.replace('{CUSTOMER}',CUSTOMER)+'</li>').join('');
+  const stats=d.stats?'<div class="s-stat">'+d.stats.map(s=>'<div><b style="color:'+st.ac+'">'+s[0]+'</b><span>'+s[1]+'</span></div>').join('')+'</div>':'';
+  const att=attachments[slot.id];
+  el.style.background=st.bg;el.style.color=st.fg;
+  el.innerHTML=
+    '<div class="s-col"><div class="s-eyebrow" style="color:'+st.ac+'">'+d.eyebrow+'</div>'+
+    '<div class="s-title" style="font-size:'+(big?'2.1em':'1.65em')+'">'+d.title+'</div>'+
+    '<ul class="s-body">'+body+'</ul>'+stats+'</div>'+
+    (att?'<div class="s-mediacol">'+mediaHtml(att,big)+'</div>':'')+
+    '<div class="s-foot"><span>'+CUSTOMER+'</span><span>Deck Studio</span></div>';
+}
+
+/* ============ RENDER: BUILDER ============ */
+function renderPills(){
+  document.getElementById('pills').innerHTML=INDUSTRIES.map(i=>
+    '<button class="pill'+(i.id===industry?' on':'')+'" onclick="setIndustry(\''+i.id+'\')">'+i.ic+' '+i.name+'</button>').join('');
+  document.getElementById('deckMeta').textContent=INDUSTRIES.find(i=>i.id===industry).name+' · '+CUSTOMER;
+}
+function renderSlots(){
+  const tname={fixed:'Fixed',swap:'Swappable',custom:'Custom'};
+  document.getElementById('slotList').innerHTML=SLOTS.map((s,i)=>
+    '<div class="slot '+s.type+(i===activeSlot?' active':'')+'" onclick="setSlot('+i+')">'+
+    '<span class="num">'+(i+1)+'</span><span class="bar"></span>'+
+    '<span class="info"><span class="name">'+s.name+'</span><br><span class="type">'+tname[s.type]+'</span></span>'+
+    (attachments[s.id]?'<span class="clip">📎</span>':'')+
+    (SLOTS.length>1?'<button class="del" title="Remove slide" onclick="event.stopPropagation();removeSlot('+i+')">✕</button>':'')+
+    '</div>').join('');
+}
+function toggleAddSlot(){document.getElementById('addSlotForm').classList.toggle('hidden');onPresetChange();}
+function onPresetChange(){
+  const p=document.getElementById('newSlotPreset').value;
+  document.getElementById('newSlotName').style.display=p==='__custom'?'':'none';
+}
+function addSlot(){
+  const p=document.getElementById('newSlotPreset').value;
+  let slot;
+  if(p==='__custom'){
+    const n=document.getElementById('newSlotName').value.trim();
+    if(!n){toast('Enter a slide name');return;}
+    slot={id:'x_'+Date.now(),name:n,type:'custom',content:{eyebrow:'Custom',title:n,body:['Add your talking points here','(editable in the real app)'],theme:'white'}};
+  }else{
+    slot={id:'x_'+p+'_'+Date.now(),name:EXTRA[p].name,type:'custom',content:EXTRA[p].content};
+  }
+  SLOTS.splice(activeSlot+1,0,slot);
+  activeSlot++;
+  document.getElementById('newSlotName').value='';
+  document.getElementById('addSlotForm').classList.add('hidden');
+  renderBuilder(true);toast('Slide "'+slot.name+'" added at position '+(activeSlot+1));
+}
+function removeSlot(i){
+  const s=SLOTS[i];
+  SLOTS.splice(i,1);delete attachments[s.id];
+  if(activeSlot>=SLOTS.length)activeSlot=SLOTS.length-1;
+  renderBuilder(true);toast('Slide "'+s.name+'" removed');
+}
+function renderPreview(fade){
+  const slot=SLOTS[activeSlot],el=document.getElementById('pvSlide');
+  document.getElementById('pvTitle').textContent=(activeSlot+1)+'. '+slot.name;
+  const b=document.getElementById('pvBadge');
+  b.textContent=slot.type==='fixed'?'Fixed':'Swappable · '+INDUSTRIES.find(i=>i.id===industry).name;
+  b.className='badge '+(slot.type==='fixed'?'f':'s');
+  document.getElementById('btnDetach').style.display=attachments[slot.id]?'':'none';
+  if(fade){el.classList.add('fade');setTimeout(()=>{renderSlide(el,slot,false);el.classList.remove('fade');},180);}
+  else renderSlide(el,slot,false);
+}
+function renderFilmstrip(){
+  document.getElementById('filmstrip').innerHTML=SLOTS.map((s,i)=>{
+    const d=slideData(s),ind=INDUSTRIES.find(x=>x.id===industry);
+    const st=themeStyle(d.theme,s.type==='swap'?ind.accent:null);
+    const lines=(d.body||[]).slice(0,2).map(b=>b.replace('{CUSTOMER}',CUSTOMER)).join('<br>');
+    return'<div class="thumb'+(i===activeSlot?' on':'')+'" onclick="setSlot('+i+')">'+
+      '<div class="mini" style="background:'+st.bg+';color:'+st.fg+'"><div class="mini-inner">'+
+      '<div class="me" style="color:'+st.ac+'">'+d.eyebrow+'</div><div class="mt">'+d.title+'</div>'+
+      '<div class="ml">'+lines+'</div></div></div>'+
+      '<div class="label"><i class="dot '+(s.type==='fixed'?'f':'s')+'"></i>'+(i+1)+'. '+s.name+(attachments[s.id]?' 📎':'')+'</div></div>';
+  }).join('');
+}
+function renderBlockLib(){
+  const slot=SLOTS[activeSlot],sub=document.getElementById('libSub'),list=document.getElementById('libList');
+  if(slot.type==='fixed'){
+    sub.textContent='"'+slot.name+'" is fixed backbone — same for every industry.';
+    list.innerHTML='<div class="block-card on"><div class="bind">Master Content</div><div class="bt">'+FIXED[slot.id].title+'</div><div class="bd">Maintained centrally by the manager.</div></div>';
+  }else{
+    const ind=INDUSTRIES.find(i=>i.id===industry),v=LIB[slot.id][industry],cur=Math.min(chosen[slot.id]||0,v.length-1);
+    sub.textContent='Blocks for "'+slot.name+'" · '+ind.name+'.';
+    list.innerHTML=v.map((x,i)=>'<div class="block-card'+(i===cur?' on':'')+'" onclick="chooseBlock('+i+')"><div class="bind">'+ind.name+'</div><div class="bt">'+x.t+'</div><div class="bd">'+x.d+'</div></div>').join('');
+  }
+}
+function renderQuickMedia(){
+  const cur=attachments[SLOTS[activeSlot].id];
+  document.getElementById('quickMedia').innerHTML=MEDIA.filter(m=>m.status==='approved').map(m=>
+    '<div class="block-card'+(cur&&cur.id===m.id?' on':'')+'" onclick="attachMedia(\''+m.id+'\')">'+
+    '<div class="bt">'+(m.type==='video'?'🎬 ':'🖼 ')+m.name+'</div>'+
+    '<div class="bd">Cloudflare R2 · reusable</div></div>').join('')||'<div class="bd" style="color:var(--muted);font-size:12px">No approved media yet.</div>';
+}
+function renderBuilder(fade){renderPills();renderSlots();renderPreview(fade);renderFilmstrip();renderBlockLib();renderQuickMedia();}
+
+/* ============ RENDER: MEDIA PAGE ============ */
+function renderMedia(){
+  const isMgr=role==='manager';
+  document.getElementById('addBox').classList.toggle('hidden',!isMgr);
+  document.getElementById('lockedBox').classList.toggle('hidden',isMgr);
+  const items=MEDIA.filter(m=>isMgr||m.status==='approved');
+  document.getElementById('mediaGrid').innerHTML=items.map(m=>{
+    let thumb;
+    if(m.type==='video'&&m.url)thumb='<video src="'+m.url+'#t=0.1" muted preload="metadata" style="width:100%;height:100%;object-fit:cover"></video>';
+    else if(mediaThumbUrl(m))thumb='<img src="'+mediaThumbUrl(m)+'">';
+    else thumb='<span class="ph">'+m.ph+'</span>';
+    const vtag=m.type==='video'?'<span class="vtag">VIDEO</span>':'';
+    const acts=isMgr?
+      (m.status==='pending'?'<button class="btn btn-primary btn-sm" onclick="approveMedia(\''+m.id+'\')">Approve</button>':'')+
+      '<button class="btn btn-ghost btn-sm" onclick="deleteMedia(\''+m.id+'\')">Delete</button>'
+      :'<button class="btn btn-ghost btn-sm" onclick="setView(\'builder\');attachMedia(\''+m.id+'\')">Use in Builder</button>';
+    return'<div class="mcard"><div class="mthumb">'+thumb+vtag+'</div><div class="mbody">'+
+      '<div class="mname">'+m.name+'</div>'+
+      '<div class="mmeta"><span class="st '+m.status+'">'+m.status+'</span><span class="chip-src">Cloudflare R2</span></div>'+
+      '<div class="macts">'+acts+'</div></div></div>';
+  }).join('')||'<div style="color:var(--muted);font-size:13px;grid-column:1/-1">No media yet — upload your first file from the box above.</div>';
+}
+
+/* ============ ACTIONS ============ */
+function setView(v){
+  view=v;
+  document.getElementById('viewBuilder').classList.toggle('hidden',v!=='builder');
+  document.getElementById('viewMedia').classList.toggle('hidden',v!=='media');
+  document.getElementById('viewPresents').classList.toggle('hidden',v!=='presents');
+  document.getElementById('tabBuilder').classList.toggle('on',v==='builder');
+  document.getElementById('tabMedia').classList.toggle('on',v==='media');
+  document.getElementById('tabPresents').classList.toggle('on',v==='presents');
+  if(v==='media')renderMedia();
+  else if(v==='presents')renderPresents();
+  else renderBuilder(false);
+}
+
+/* ============ PRESENTATION LIBRARY ============ */
+function renderPresents(){
+  document.getElementById('presentGrid').innerHTML=PRESENTS.map(p=>{
+    const ind=INDUSTRIES.find(i=>i.id===p.industry);
+    const strip=p.slots.map(sid=>{
+      const t=sid.startsWith('x_')?'c':(LIB[sid]?'s':'f');
+      return'<i class="'+t+'"></i>';
+    }).join('');
+    return'<div class="pcard">'+
+      '<div class="pc-cust">'+p.customer+'</div>'+
+      '<div class="pc-meta">'+ind.ic+' '+ind.name+' · '+p.slots.length+' slides<br>Saved '+p.date+' by '+p.by+'</div>'+
+      '<div class="pc-strip">'+strip+'</div>'+
+      '<span class="pc-size">outline only · '+p.sizeKB+' KB</span>'+
+      '<div class="macts" style="margin-top:12px">'+
+      '<button class="btn btn-primary btn-sm" onclick="loadDeck(\''+p.id+'\')">Open</button>'+
+      '<button class="btn btn-ghost btn-sm" onclick="dupDeck(\''+p.id+'\')">Duplicate</button>'+
+      '<button class="btn btn-ghost btn-sm" onclick="deleteDeck(\''+p.id+'\')">Delete</button>'+
+      '</div></div>';
+  }).join('')||'<div style="color:var(--muted);font-size:13px">No saved presentations yet — build a deck and press Save.</div>';
+}
+function saveDeck(){
+  const outline={customer:CUSTOMER,industry,slots:SLOTS.map(s=>s.id),chosen,attachments:Object.fromEntries(Object.entries(attachments).map(([k,m])=>[k,m.id]))};
+  const kb=Math.max(1,Math.round(JSON.stringify(outline).length/1024*10)/10);
+  PRESENTS.unshift({id:'p'+Date.now(),customer:CUSTOMER,industry,date:'22 Jul 2026',by:role==='manager'?'Manager':'Sales',slots:SLOTS.map(s=>s.id),sizeKB:kb});
+  toast('Saved as outline — '+kb+' KB only (no media duplicated)');
+}
+function loadDeck(id){
+  const p=PRESENTS.find(x=>x.id===id);if(!p)return;
+  CUSTOMER=p.customer;industry=p.industry;chosen={};attachments={};activeSlot=0;
+  SLOTS=p.slots.map(sid=>{
+    if(sid.startsWith('x_')){
+      const key=sid.split('_')[1];
+      const ex=EXTRA[key]||{name:'Custom Slide',content:{eyebrow:'Custom',title:'Custom Slide',body:['Restored from outline'],theme:'white'}};
+      return{id:sid,name:ex.name,type:'custom',content:ex.content};
+    }
+    const base=[{id:'cover',name:'Cover',type:'fixed'},{id:'profile',name:'Company Profile',type:'fixed'},{id:'pain',name:'Industry Pain Points',type:'swap'},{id:'solution',name:'Our Solution',type:'swap'},{id:'case',name:'Case Study',type:'swap'},{id:'coverage',name:'Service Coverage',type:'fixed'},{id:'pricing',name:'Pricing Structure',type:'fixed'},{id:'closing',name:'Next Steps',type:'fixed'}];
+    return base.find(b=>b.id===sid)||base[0];
+  });
+  setView('builder');toast('Loaded "'+p.customer+'" — re-assembled from outline');
+}
+function dupDeck(id){
+  const p=PRESENTS.find(x=>x.id===id);if(!p)return;
+  PRESENTS.unshift({...p,id:'p'+Date.now(),customer:p.customer+' (copy)',date:'22 Jul 2026'});
+  renderPresents();toast('Duplicated — outlines are cheap to copy');
+}
+function deleteDeck(id){PRESENTS=PRESENTS.filter(x=>x.id!==id);renderPresents();toast('Presentation deleted');}
+
+/* ============ AI GENERATE ============ */
+function openAI(){document.getElementById('aiModal').classList.remove('hidden');}
+function closeAI(){document.getElementById('aiModal').classList.add('hidden');}
+function generateAI(){
+  const name=document.getElementById('aiName'),addr=document.getElementById('aiAddr');
+  let ok=true;
+  [name,addr].forEach(f=>{f.classList.toggle('err',!f.value.trim());if(!f.value.trim())ok=false;});
+  if(!ok){toast('Customer Name and Address are required (SOP)');return;}
+  const ind=document.getElementById('aiInd').value;
+  const size=document.getElementById('aiSize').value;
+  const pain=document.getElementById('aiPain').value.trim();
+  closeAI();
+  const load=document.getElementById('aiLoading');load.classList.remove('hidden');
+  const steps=['Reading customer brief…','Matching industry blocks…','Arranging master structure…','Drafting customer-specific slide…'];
+  let si=0;document.getElementById('aiStep').textContent=steps[0];
+  const tick=setInterval(()=>{si++;if(si<steps.length)document.getElementById('aiStep').textContent=steps[si];},550);
+  setTimeout(()=>{
+    clearInterval(tick);load.classList.add('hidden');
+    /* assemble deck from brief */
+    CUSTOMER=name.value.trim();industry=ind;chosen={};attachments={};
+    SLOTS=[
+      {id:'cover',name:'Cover',type:'fixed'},
+      {id:'profile',name:'Company Profile',type:'fixed'},
+      {id:'pain',name:'Industry Pain Points',type:'swap'},
+    ];
+    if(pain){
+      const bullets=pain.split(/[,\n]+/).map(s=>s.trim()).filter(Boolean).slice(0,4).map(s=>'"'+s+'"');
+      bullets.push('Est. volume: '+size);
+      SLOTS.push({id:'x_brief_'+Date.now(),name:'What We Heard From You',type:'custom',
+        content:{eyebrow:'Your Situation — '+CUSTOMER,title:'What We Heard From You',body:bullets,theme:'wash'}});
+    }
+    SLOTS.push({id:'solution',name:'Our Solution',type:'swap'});
+    if(document.getElementById('sopCase').checked)SLOTS.push({id:'case',name:'Case Study',type:'swap'});
+    if(document.getElementById('sopVideo').checked)SLOTS.push({id:'x_video_'+Date.now(),name:'Company Video',type:'custom',content:EXTRA.video.content});
+    SLOTS.push({id:'coverage',name:'Service Coverage',type:'fixed'});
+    if(document.getElementById('sopPrice').checked)SLOTS.push({id:'pricing',name:'Pricing Structure',type:'fixed'});
+    if(document.getElementById('sopTrial').checked)SLOTS.push({id:'x_trial_'+Date.now(),name:'Trial Proposal',type:'custom',content:EXTRA.trial.content});
+    SLOTS.push({id:'closing',name:'Next Steps',type:'fixed'});
+    activeSlot=0;setView('builder');renderBuilder(true);
+    toast('Deck generated for '+CUSTOMER+' — ~4,200 tokens ≈ ฿0.4 est. (Haiku)');
+  },2300);
+}
+function setRole(r){
+  role=r;
+  document.getElementById('roleManager').classList.toggle('on',r==='manager');
+  document.getElementById('roleSales').classList.toggle('on',r==='sales');
+  if(view==='media')renderMedia();
+  toast(r==='manager'?'Manager view — full control of library':'Sales view — approved resources only');
+}
+function setIndustry(id){industry=id;chosen={};renderBuilder(true);toast('Deck re-assembled for '+INDUSTRIES.find(i=>i.id===id).name);}
+function setSlot(i){activeSlot=i;renderBuilder(false);}
+function chooseBlock(i){chosen[SLOTS[activeSlot].id]=i;renderBuilder(true);toast('Block swapped');}
+function attachMedia(id){
+  const m=MEDIA.find(x=>x.id===id);
+  if(!m||m.status!=='approved'){toast('Only approved media can be used');return;}
+  attachments[SLOTS[activeSlot].id]=m;renderBuilder(true);toast('"'+m.name+'" placed on slide '+(activeSlot+1));
+}
+function detachMedia(){delete attachments[SLOTS[activeSlot].id];renderBuilder(true);toast('Media removed from slide');}
+
+async function addMedia(){
+  const fileInput=document.getElementById('inFile');
+  const file=fileInput.files[0];
+  if(!file){toast('Choose a file first');return;}
+  if(!WORKER_URL){toast('WORKER_URL is not set in the code yet');return;}
+  const name=document.getElementById('inName').value.trim()||file.name;
+  const type=file.type.startsWith('video')?'video':'image';
+  const btn=document.getElementById('btnUpload');
+  btn.disabled=true;
+  try{
+    /* Upload the file straight to the Worker; the Worker writes it to R2 via its binding.
+       No presigning, no S3 keys, no R2 CORS — the browser only ever talks to the Worker. */
+    toast('Uploading to R2…');
+    const res=await fetch(WORKER_URL,{
+      method:'POST',
+      headers:{'Content-Type':file.type,'X-File-Name':encodeURIComponent(file.name)},
+      body:file
+    });
+    if(!res.ok){const e=await res.json().catch(()=>({}));throw new Error(e.error||('Upload failed ('+res.status+')'));}
+    const {publicUrl}=await res.json();
+    /* Save the reference — in memory here; in production replace this line with an insert into Supabase */
+    MEDIA.unshift({id:'m'+Date.now(),name,type,url:publicUrl,ph:type==='video'?'🎬':'🖼',status:'approved'});
+    fileInput.value='';document.getElementById('inName').value='';
+    renderMedia();toast('Uploaded — saved as an R2 URL');
+  }catch(err){
+    toast('Error: '+err.message);
+  }finally{
+    btn.disabled=false;
+  }
+}
+function approveMedia(id){const m=MEDIA.find(x=>x.id===id);if(m)m.status='approved';renderMedia();toast('Approved — now visible to sales team');}
+function deleteMedia(id){MEDIA=MEDIA.filter(x=>x.id!==id);renderMedia();toast('Removed from library (file stays on R2)');}
+
+/* Present */
+function openPresent(){presentIdx=view==='builder'?activeSlot:0;document.getElementById('present').classList.add('show');renderPresent();
+  if(document.documentElement.requestFullscreen)document.documentElement.requestFullscreen().catch(()=>{});}
+function closePresent(){document.getElementById('present').classList.remove('show');if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});}
+function renderPresent(){renderSlide(document.getElementById('prSlide'),SLOTS[presentIdx],true);
+  document.getElementById('prPg').textContent=(presentIdx+1)+' / '+SLOTS.length;}
+function nav(d){presentIdx=Math.max(0,Math.min(SLOTS.length-1,presentIdx+d));renderPresent();}
+document.addEventListener('keydown',e=>{
+  if(!document.getElementById('present').classList.contains('show'))return;
+  if(e.key==='ArrowRight'||e.key===' ')nav(1);
+  if(e.key==='ArrowLeft')nav(-1);
+  if(e.key==='Escape')closePresent();
+});
+
+let toastTimer;
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
+  clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2400);}
+
+renderBuilder(false);
+</script>
+</body>
+</html>
