@@ -215,6 +215,16 @@ input,select{font-family:inherit;font-size:13px}
 .login-err{background:#FEF2F2;color:#B91C1C;font-size:12.5px;padding:8px 11px;border-radius:8px;margin-bottom:10px}
 .login-foot{color:#94A3B8;font-size:11px;text-align:center;margin-top:16px;line-height:1.5}
 .user-chip{font-size:12px;color:#64748B;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* ---- PDF export (browser print → Save as PDF) ---- */
+#printArea{display:none}
+@media print{
+  body>*{display:none!important}
+  #printArea{display:block!important}
+  .print-page{page-break-after:always;width:100%;height:100vh;display:flex;align-items:center;justify-content:center;background:#fff;box-sizing:border-box}
+  .print-page:last-child{page-break-after:auto}
+  .print-page .slide{width:100%;height:auto;aspect-ratio:16/9;border:none;border-radius:0;font-size:15px}
+  @page{size:landscape;margin:6mm}
+}
 </style>
 </head>
 <body>
@@ -238,6 +248,7 @@ input,select{font-family:inherit;font-size:13px}
     <button class="tab on" id="tabBuilder" onclick="setView('builder')">Builder</button>
     <button class="tab" id="tabMedia" onclick="setView('media')">Media Library</button>
     <button class="tab" id="tabPresents" onclick="setView('presents')">Presentations</button>
+    <button class="tab" id="tabTemplates" onclick="setView('templates')">Templates</button>
   </div>
   <div class="spacer"></div>
   <div class="role-toggle hidden" id="roleToggle">
@@ -248,6 +259,7 @@ input,select{font-family:inherit;font-size:13px}
   <button class="btn btn-ghost btn-sm" onclick="logout()">Logout</button>
   <button class="btn btn-ghost" onclick="openAI()" style="border-color:#C7D2FE;color:#4F46E5;display:inline-flex;align-items:center;gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M11 2l1.7 6.3L19 10l-6.3 1.7L11 18l-1.7-6.3L3 10l6.3-1.7z"/><path d="M18.5 13.5l.7 2.3L21.5 16.5l-2.3.7L18.5 19.5l-.7-2.3L15.5 16.5l2.3-.7z"/></svg>AI Deck</button>
   <button class="btn btn-ghost" onclick="saveDeck()">Save</button>
+  <button class="btn btn-ghost" onclick="exportPDF()">⇩ PDF</button>
   <button class="btn btn-primary" onclick="openPresent()">▶ Present</button>
 </div>
 
@@ -395,6 +407,35 @@ input,select{font-family:inherit;font-size:13px}
 </div>
 
 <!-- PRESENT -->
+<!-- ================= MASTER TEMPLATES VIEW ================= -->
+<div class="media-page hidden" id="viewTemplates">
+  <div class="media-head">
+    <div>
+      <h1>Master Templates</h1>
+      <p>Starting-point PowerPoint decks and Google Slides links. Sales can open or download any template to start from; only managers can add or remove.</p>
+    </div>
+  </div>
+
+  <div class="add-box" id="tplAddBox">
+    <div class="panel-title" style="margin-bottom:10px">Add a master template <span class="badge s" style="margin-left:6px">Manager only</span></div>
+    <div class="row">
+      <input type="file" id="tplFile" accept=".pptx,.ppt,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.ms-powerpoint" style="flex:1;min-width:220px;padding:9px 12px;border:1px solid var(--line);border-radius:8px;background:#fff">
+      <input type="text" id="tplName" placeholder="Display name (blank = file name)" style="max-width:220px">
+      <button class="btn btn-primary" id="btnTplUpload" onclick="uploadTemplate()">⬆ Upload .pptx</button>
+    </div>
+    <div class="add-hint" style="margin-bottom:16px">Upload a PowerPoint (.pptx / .ppt) — stored on Cloudflare R2 as a reusable starting deck.</div>
+    <div class="row">
+      <input type="text" id="gsName" placeholder="Google Slides name" style="max-width:220px">
+      <input type="url" id="gsUrl" placeholder="https://docs.google.com/presentation/…" style="flex:1;min-width:220px">
+      <button class="btn btn-ghost" onclick="addGSlides()">＋ Add Google Slides link</button>
+    </div>
+    <div class="add-hint">Paste a Google Slides share link — set sharing to “anyone with the link” so the team can open it.</div>
+  </div>
+  <div class="locked hidden" id="tplLockedBox">🔒 <span><b>Sales view:</b> adding or removing templates is disabled. Open or download any template below to start a deck.</span></div>
+
+  <div class="media-grid" id="tplGrid"></div>
+</div>
+
 <div class="present" id="present">
   <button class="close" onclick="closePresent()">✕ Exit</button>
   <div class="stage"><div class="slide"><div class="slide-inner" id="prSlide"></div></div></div>
@@ -404,6 +445,8 @@ input,select{font-family:inherit;font-size:13px}
     <button onclick="nav(1)">›</button>
   </div>
 </div>
+
+<div id="printArea"></div>
 
 <div class="toast" id="toast"></div>
 
@@ -526,6 +569,86 @@ async function loadMedia(){
   }catch(e){ toast('Media load error'); }
 }
 
+/* ============ MASTER TEMPLATES (Supabase + R2) ============ */
+async function loadTemplates(){
+  try{
+    const res=await sbRest('GET','deckstudio_templates?select=*&order=created_at.desc');
+    if(!res.ok) return;
+    TEMPLATES=await res.json();
+    if(view==='templates') renderTemplates();
+  }catch(e){}
+}
+function renderTemplates(){
+  const isMgr=role==='manager';
+  document.getElementById('tplAddBox').classList.toggle('hidden',!isMgr);
+  document.getElementById('tplLockedBox').classList.toggle('hidden',isMgr);
+  document.getElementById('tplGrid').innerHTML=TEMPLATES.map(t=>{
+    const icon=t.kind==='gslides'?'🔗':'📊';
+    const label=t.kind==='gslides'?'Google Slides':'PowerPoint · R2';
+    const open='<a class="btn btn-primary btn-sm" href="'+t.url+'" target="_blank" rel="noopener">'+(t.kind==='gslides'?'Open':'Download')+'</a>';
+    const del=isMgr?'<button class="btn btn-ghost btn-sm" onclick="deleteTemplate(\''+t.id+'\')">Delete</button>':'';
+    return '<div class="mcard"><div class="mthumb" style="display:flex;align-items:center;justify-content:center;font-size:2.6em;background:linear-gradient(135deg,#EFF6FF,#DBEAFE)">'+icon+'</div>'+
+      '<div class="mbody"><div class="mname">'+t.name+'</div>'+
+      '<div class="mmeta"><span class="chip-src">'+label+'</span></div>'+
+      '<div class="macts">'+open+del+'</div></div></div>';
+  }).join('')||'<div style="color:var(--muted);font-size:13px;grid-column:1/-1">No templates yet — add a PowerPoint or a Google Slides link above.</div>';
+}
+async function uploadTemplate(){
+  const fi=document.getElementById('tplFile'); const file=fi.files[0];
+  if(!file){toast('Choose a .pptx file first');return;}
+  const name=document.getElementById('tplName').value.trim()||file.name;
+  const btn=document.getElementById('btnTplUpload'); btn.disabled=true;
+  try{
+    toast('Uploading template…');
+    const res=await fetch(WORKER_URL,{method:'POST',
+      headers:{'Content-Type':file.type||'application/vnd.openxmlformats-officedocument.presentationml.presentation','X-File-Name':encodeURIComponent(file.name)},
+      body:file});
+    if(!res.ok){const e=await res.json().catch(()=>({}));throw new Error(e.error||('Upload failed ('+res.status+')'));}
+    const up=await res.json();
+    const ins=await sbRest('POST','deckstudio_templates',{name,kind:'pptx',url:up.publicUrl,r2_key:up.key||null},'return=representation');
+    if(!ins.ok){const e=await ins.json().catch(()=>({}));throw new Error(e.message||'On R2 but DB save failed — managers only');}
+    TEMPLATES.unshift((await ins.json())[0]);
+    fi.value='';document.getElementById('tplName').value='';
+    renderTemplates();toast('Template added');
+  }catch(err){toast('Error: '+err.message);}
+  finally{btn.disabled=false;}
+}
+async function addGSlides(){
+  const name=document.getElementById('gsName').value.trim();
+  const url=document.getElementById('gsUrl').value.trim();
+  if(!name||!url){toast('Enter a name and a Google Slides URL');return;}
+  if(!/^https?:\/\//i.test(url)){toast('URL must start with http');return;}
+  try{
+    const ins=await sbRest('POST','deckstudio_templates',{name,kind:'gslides',url},'return=representation');
+    if(!ins.ok){const e=await ins.json().catch(()=>({}));throw new Error(e.message||'Save failed — managers only');}
+    TEMPLATES.unshift((await ins.json())[0]);
+    document.getElementById('gsName').value='';document.getElementById('gsUrl').value='';
+    renderTemplates();toast('Google Slides link added');
+  }catch(err){toast('Error: '+err.message);}
+}
+async function deleteTemplate(id){
+  const res=await sbRest('DELETE','deckstudio_templates?id=eq.'+id,undefined,'return=minimal');
+  if(!res.ok){toast('Delete failed — managers only');return;}
+  TEMPLATES=TEMPLATES.filter(t=>t.id!==id);
+  renderTemplates();toast('Template removed (file stays on R2)');
+}
+
+/* ============ EXPORT PDF (browser print → Save as PDF) ============ */
+function exportPDF(){
+  if(!SLOTS.length){toast('Nothing to export');return;}
+  const area=document.getElementById('printArea');
+  area.innerHTML='';
+  SLOTS.forEach(slot=>{
+    const page=document.createElement('div');page.className='print-page';
+    const slide=document.createElement('div');slide.className='slide';
+    const inner=document.createElement('div');inner.className='slide-inner';
+    slide.appendChild(inner);page.appendChild(slide);area.appendChild(page);
+    renderSlide(inner,slot,true);
+  });
+  toast('Opening print dialog — choose “Save as PDF”');
+  setTimeout(()=>window.print(),250);
+}
+
 /* ============ CONTENT & SEED DATA ============ */
 const INDUSTRIES = [
   {id:'auto', name:'Automotive', ic:'🚗', accent:'#B45309'},
@@ -586,6 +709,7 @@ let role='sales', view='builder', industry='auto', activeSlot=0;
 let chosen={}, attachments={}, presentIdx=0;
 let CUSTOMER='ABC Manufacturing Co., Ltd.';
 let PRESENTS=[];
+let TEMPLATES=[];
 
 /* ============ HELPERS ============ */
 function slideData(slot){
@@ -739,11 +863,14 @@ function setView(v){
   document.getElementById('viewBuilder').classList.toggle('hidden',v!=='builder');
   document.getElementById('viewMedia').classList.toggle('hidden',v!=='media');
   document.getElementById('viewPresents').classList.toggle('hidden',v!=='presents');
+  document.getElementById('viewTemplates').classList.toggle('hidden',v!=='templates');
   document.getElementById('tabBuilder').classList.toggle('on',v==='builder');
   document.getElementById('tabMedia').classList.toggle('on',v==='media');
   document.getElementById('tabPresents').classList.toggle('on',v==='presents');
+  document.getElementById('tabTemplates').classList.toggle('on',v==='templates');
   if(v==='media')renderMedia();
   else if(v==='presents')renderPresents();
+  else if(v==='templates')renderTemplates();
   else renderBuilder(false);
 }
 
@@ -983,6 +1110,7 @@ function startApp(){
   applyAuthUI();
   renderBuilder(false);
   loadMedia();               /* async — fills MEDIA then re-renders the relevant view */
+  loadTemplates();           /* async — fills the Templates tab */
 }
 async function boot(){
   restoreSession();
