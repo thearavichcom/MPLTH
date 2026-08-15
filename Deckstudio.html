@@ -203,9 +203,34 @@ input,select{font-family:inherit;font-size:13px}
 .ai-loading .mini{font-size:11.5px;opacity:.5}
 .hidden{display:none!important}
 @media(max-width:760px){.canvas{padding:16px}.structure{padding:16px}.tabs{margin-left:0}}
+/* ---- login gate + auth chrome ---- */
+.login-overlay{position:fixed;inset:0;z-index:9999;background:linear-gradient(135deg,#0F172A,#1E293B);display:flex;align-items:center;justify-content:center;padding:20px}
+.login-overlay.hidden{display:none!important}
+.login-card{width:100%;max-width:360px;background:#fff;border-radius:16px;padding:32px 28px;box-shadow:0 24px 60px rgba(0,0,0,.35)}
+.login-brand{font-weight:800;font-size:22px;color:#0F172A;letter-spacing:-.5px}
+.login-brand span{color:#2563EB;margin:0 5px}
+.login-sub{color:#64748B;font-size:13px;margin:6px 0 20px}
+.login-card input{width:100%;padding:11px 13px;border:1px solid #E2E8F0;border-radius:9px;margin-bottom:12px;font-size:14px;box-sizing:border-box}
+.login-card input:focus{outline:none;border-color:#2563EB;box-shadow:0 0 0 3px rgba(37,99,235,.12)}
+.login-err{background:#FEF2F2;color:#B91C1C;font-size:12.5px;padding:8px 11px;border-radius:8px;margin-bottom:10px}
+.login-foot{color:#94A3B8;font-size:11px;text-align:center;margin-top:16px;line-height:1.5}
+.user-chip{font-size:12px;color:#64748B;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 </style>
 </head>
 <body>
+
+<!-- ================= LOGIN GATE ================= -->
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-card">
+    <div class="login-brand">Sales Deck<span>›</span>Studio</div>
+    <p class="login-sub">Sign in with your company account</p>
+    <input type="email" id="loginEmail" placeholder="Email" autocomplete="username">
+    <input type="password" id="loginPass" placeholder="Password" autocomplete="current-password">
+    <div class="login-err hidden" id="loginErr"></div>
+    <button class="btn btn-primary" id="loginBtn" onclick="doLogin()" style="width:100%;justify-content:center;margin-top:4px">Sign in</button>
+    <div class="login-foot">Manager tools are unlocked only for authorised roles<br>in the company workspace.</div>
+  </div>
+</div>
 
 <div class="topbar">
   <div class="brand">Sales Deck<span class="chev">›</span>Studio</div>
@@ -215,10 +240,12 @@ input,select{font-family:inherit;font-size:13px}
     <button class="tab" id="tabPresents" onclick="setView('presents')">Presentations</button>
   </div>
   <div class="spacer"></div>
-  <div class="role-toggle">
+  <div class="role-toggle hidden" id="roleToggle">
     <button id="roleManager" class="on" onclick="setRole('manager')">Manager</button>
     <button id="roleSales" onclick="setRole('sales')">Sales</button>
   </div>
+  <span class="user-chip" id="userChip" title="Signed in"></span>
+  <button class="btn btn-ghost btn-sm" onclick="logout()">Logout</button>
   <button class="btn btn-ghost" onclick="openAI()" style="border-color:#C7D2FE;color:#4F46E5;display:inline-flex;align-items:center;gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M11 2l1.7 6.3L19 10l-6.3 1.7L11 18l-1.7-6.3L3 10l6.3-1.7z"/><path d="M18.5 13.5l.7 2.3L21.5 16.5l-2.3.7L18.5 19.5l-.7-2.3L15.5 16.5l2.3-.7z"/></svg>AI Deck</button>
   <button class="btn btn-ghost" onclick="saveDeck()">Save</button>
   <button class="btn btn-primary" onclick="openPresent()">▶ Present</button>
@@ -385,6 +412,120 @@ input,select{font-family:inherit;font-size:13px}
 /* Paste your Worker URL here after deploying the Worker (e.g. https://deckstudio-upload.xxx.workers.dev) */
 const WORKER_URL = "https://deckstudio-upload.thearavich-t.workers.dev";
 
+/* ============ SUPABASE (REST + fetch, no SDK) ============ */
+const SUPABASE_URL = "https://ptgyxdtpjvjzrwgqzekh.supabase.co";
+const SUPABASE_KEY = "sb_publishable_f4AlQCL7CVTgoT1hA7KR3g_eItQDHs_";  /* publishable key — safe to expose; all protection is via RLS */
+const SESSION_KEY  = "deckstudio_session";  /* own key so we never clobber the executive-workspace session */
+
+let AUTH = { token:null, refresh:null, email:null, uid:null, isManager:false };
+
+function restoreSession(){
+  try{ const s=JSON.parse(localStorage.getItem(SESSION_KEY)||'null');
+    if(s){AUTH.token=s.token;AUTH.refresh=s.refresh;AUTH.email=s.email;AUTH.uid=s.uid;} }catch(e){}
+}
+function saveSession(){
+  try{ localStorage.setItem(SESSION_KEY,JSON.stringify({token:AUTH.token,refresh:AUTH.refresh,email:AUTH.email,uid:AUTH.uid})); }catch(e){}
+}
+function clearSession(){
+  try{ localStorage.removeItem(SESSION_KEY); }catch(e){}
+  AUTH={token:null,refresh:null,email:null,uid:null,isManager:false};
+}
+function authHeaders(){
+  return {'apikey':SUPABASE_KEY,'Authorization':'Bearer '+(AUTH.token||SUPABASE_KEY),'Content-Type':'application/json'};
+}
+
+/* REST helper — one automatic refresh+retry on 401 */
+async function sbRest(method,pathAndQuery,body,prefer){
+  const go=()=>fetch(SUPABASE_URL+'/rest/v1/'+pathAndQuery,{
+    method, headers:Object.assign(authHeaders(), prefer?{'Prefer':prefer}:{}),
+    body: body!==undefined ? JSON.stringify(body) : undefined
+  });
+  let res=await go();
+  if(res.status===401 && AUTH.refresh && await refreshSession()) res=await go();
+  return res;
+}
+async function sbRpc(fn,args){
+  const go=()=>fetch(SUPABASE_URL+'/rest/v1/rpc/'+fn,{method:'POST',headers:authHeaders(),body:JSON.stringify(args||{})});
+  let res=await go();
+  if(res.status===401 && AUTH.refresh && await refreshSession()) res=await go();
+  return res;
+}
+
+/* Auth */
+async function login(email,password){
+  const res=await fetch(SUPABASE_URL+'/auth/v1/token?grant_type=password',{
+    method:'POST',headers:{'apikey':SUPABASE_KEY,'Content-Type':'application/json'},
+    body:JSON.stringify({email,password})
+  });
+  const data=await res.json().catch(()=>({}));
+  if(!res.ok) throw new Error(data.error_description||data.msg||data.error||'Login failed');
+  AUTH.token=data.access_token; AUTH.refresh=data.refresh_token;
+  AUTH.email=data.user&&data.user.email; AUTH.uid=data.user&&data.user.id;
+  saveSession();
+  await resolveManager();
+}
+async function refreshSession(){
+  if(!AUTH.refresh) return false;
+  try{
+    const res=await fetch(SUPABASE_URL+'/auth/v1/token?grant_type=refresh_token',{
+      method:'POST',headers:{'apikey':SUPABASE_KEY,'Content-Type':'application/json'},
+      body:JSON.stringify({refresh_token:AUTH.refresh})
+    });
+    if(!res.ok) return false;
+    const data=await res.json();
+    AUTH.token=data.access_token; AUTH.refresh=data.refresh_token||AUTH.refresh;
+    if(data.user){AUTH.email=data.user.email;AUTH.uid=data.user.id;}
+    saveSession(); return true;
+  }catch(e){ return false; }
+}
+/* returns 'ok' | 'unauth' | 'error' */
+async function resolveManager(){
+  try{
+    const res=await sbRpc('is_deck_manager');
+    if(res.status===401) return 'unauth';
+    if(res.ok){ const v=await res.json(); AUTH.isManager=(v===true); return 'ok'; }
+    return 'error';
+  }catch(e){ return 'error'; }
+}
+function logout(){ clearSession(); location.reload(); }
+
+/* Login screen control */
+function showLogin(){ document.getElementById('loginOverlay').classList.remove('hidden'); }
+function hideLogin(){ document.getElementById('loginOverlay').classList.add('hidden'); }
+async function doLogin(){
+  const email=document.getElementById('loginEmail').value.trim();
+  const pass=document.getElementById('loginPass').value;
+  const err=document.getElementById('loginErr');
+  const btn=document.getElementById('loginBtn');
+  err.classList.add('hidden');
+  if(!email||!pass){ err.textContent='Enter email and password'; err.classList.remove('hidden'); return; }
+  btn.disabled=true; btn.textContent='Signing in…';
+  try{ await login(email,pass); startApp(); }
+  catch(e){ err.textContent=e.message||'Login failed'; err.classList.remove('hidden'); }
+  finally{ btn.disabled=false; btn.textContent='Sign in'; }
+}
+
+/* Reflect auth state in the top bar */
+function applyAuthUI(){
+  document.getElementById('userChip').textContent=AUTH.email||'';
+  const toggle=document.getElementById('roleToggle');
+  if(AUTH.isManager){ toggle.classList.remove('hidden'); }
+  else { toggle.classList.add('hidden'); role='sales'; }
+  document.getElementById('roleManager').classList.toggle('on',role==='manager');
+  document.getElementById('roleSales').classList.toggle('on',role==='sales');
+}
+
+/* ============ MEDIA PERSISTENCE (Supabase) ============ */
+async function loadMedia(){
+  try{
+    const res=await sbRest('GET','deckstudio_media?select=*&order=created_at.desc');
+    if(!res.ok){ toast('Could not load media library'); return; }
+    const rows=await res.json();
+    MEDIA=rows.map(r=>({id:r.id,name:r.name,type:r.type,url:r.url,r2_key:r.r2_key,status:r.status,ph:r.type==='video'?'🎬':'🖼'}));
+    if(view==='media') renderMedia(); else renderQuickMedia();
+  }catch(e){ toast('Media load error'); }
+}
+
 /* ============ CONTENT & SEED DATA ============ */
 const INDUSTRIES = [
   {id:'auto', name:'Automotive', ic:'🚗', accent:'#B45309'},
@@ -441,7 +582,7 @@ const LIB = {
 let MEDIA = [];
 
 /* ============ STATE ============ */
-let role='manager', view='builder', industry='auto', activeSlot=0;
+let role='sales', view='builder', industry='auto', activeSlot=0;
 let chosen={}, attachments={}, presentIdx=0;
 let CUSTOMER='ABC Manufacturing Co., Ltd.';
 let PRESENTS=[];
@@ -656,46 +797,103 @@ function deleteDeck(id){PRESENTS=PRESENTS.filter(x=>x.id!==id);renderPresents();
 /* ============ AI GENERATE ============ */
 function openAI(){document.getElementById('aiModal').classList.remove('hidden');}
 function closeAI(){document.getElementById('aiModal').classList.add('hidden');}
-function generateAI(){
+/* --- read + validate the brief form --- */
+function briefFromForm(){
   const name=document.getElementById('aiName'),addr=document.getElementById('aiAddr');
   let ok=true;
   [name,addr].forEach(f=>{f.classList.toggle('err',!f.value.trim());if(!f.value.trim())ok=false;});
-  if(!ok){toast('Customer Name and Address are required (SOP)');return;}
-  const ind=document.getElementById('aiInd').value;
-  const size=document.getElementById('aiSize').value;
-  const pain=document.getElementById('aiPain').value.trim();
+  if(!ok){toast('Customer Name and Address are required (SOP)');return null;}
+  return {
+    customer:name.value.trim(),
+    address:addr.value.trim(),
+    industry:document.getElementById('aiInd').value,
+    size:document.getElementById('aiSize').value,
+    pain:document.getElementById('aiPain').value.trim(),
+    include:{
+      case:document.getElementById('sopCase').checked,
+      video:document.getElementById('sopVideo').checked,
+      pricing:document.getElementById('sopPrice').checked,
+      trial:document.getElementById('sopTrial').checked,
+    }
+  };
+}
+/* --- map one block id → a SLOTS entry --- */
+function slotFromId(id){
+  const base={
+    cover:{id:'cover',name:'Cover',type:'fixed'},
+    profile:{id:'profile',name:'Company Profile',type:'fixed'},
+    pain:{id:'pain',name:'Industry Pain Points',type:'swap'},
+    solution:{id:'solution',name:'Our Solution',type:'swap'},
+    case:{id:'case',name:'Case Study',type:'swap'},
+    coverage:{id:'coverage',name:'Service Coverage',type:'fixed'},
+    pricing:{id:'pricing',name:'Pricing Structure',type:'fixed'},
+    closing:{id:'closing',name:'Next Steps',type:'fixed'},
+  };
+  if(base[id]) return base[id];
+  if(EXTRA[id]) return {id:'x_'+id+'_'+Date.now(),name:EXTRA[id].name,type:'custom',content:EXTRA[id].content};
+  return null;
+}
+/* --- build SLOTS from the AI's JSON outline --- */
+function buildSlotsFromDeck(deck){
+  const out=[];
+  (deck.slots||[]).forEach(id=>{
+    if(id==='brief'){
+      const cs=deck.customSlide||{};
+      out.push({id:'x_brief_'+Date.now(),name:'What We Heard From You',type:'custom',
+        content:{eyebrow:cs.eyebrow||('Your Situation — '+CUSTOMER),title:cs.title||'What We Heard From You',
+                 body:Array.isArray(cs.body)&&cs.body.length?cs.body:['Details captured from your brief'],theme:'wash'}});
+      return;
+    }
+    const s=slotFromId(id); if(s) out.push(s);
+  });
+  return out;
+}
+/* --- deterministic fallback if the AI is unavailable --- */
+function assembleDeckLocally(b){
+  const S=[slotFromId('cover'),slotFromId('profile'),slotFromId('pain')];
+  if(b.pain){
+    const bullets=b.pain.split(/[,\n]+/).map(s=>s.trim()).filter(Boolean).slice(0,4).map(s=>'"'+s+'"');
+    bullets.push('Est. volume: '+b.size);
+    S.push({id:'x_brief_'+Date.now(),name:'What We Heard From You',type:'custom',
+      content:{eyebrow:'Your Situation — '+b.customer,title:'What We Heard From You',body:bullets,theme:'wash'}});
+  }
+  S.push(slotFromId('solution'));
+  if(b.include.case)S.push(slotFromId('case'));
+  if(b.include.video)S.push(slotFromId('video'));
+  S.push(slotFromId('coverage'));
+  if(b.include.pricing)S.push(slotFromId('pricing'));
+  if(b.include.trial)S.push(slotFromId('trial'));
+  S.push(slotFromId('closing'));
+  return S.filter(Boolean);
+}
+
+async function generateAI(){
+  const brief=briefFromForm(); if(!brief)return;
   closeAI();
   const load=document.getElementById('aiLoading');load.classList.remove('hidden');
   const steps=['Reading customer brief…','Matching industry blocks…','Arranging master structure…','Drafting customer-specific slide…'];
   let si=0;document.getElementById('aiStep').textContent=steps[0];
-  const tick=setInterval(()=>{si++;if(si<steps.length)document.getElementById('aiStep').textContent=steps[si];},550);
-  setTimeout(()=>{
-    clearInterval(tick);load.classList.add('hidden');
-    /* assemble deck from brief */
-    CUSTOMER=name.value.trim();industry=ind;chosen={};attachments={};
-    SLOTS=[
-      {id:'cover',name:'Cover',type:'fixed'},
-      {id:'profile',name:'Company Profile',type:'fixed'},
-      {id:'pain',name:'Industry Pain Points',type:'swap'},
-    ];
-    if(pain){
-      const bullets=pain.split(/[,\n]+/).map(s=>s.trim()).filter(Boolean).slice(0,4).map(s=>'"'+s+'"');
-      bullets.push('Est. volume: '+size);
-      SLOTS.push({id:'x_brief_'+Date.now(),name:'What We Heard From You',type:'custom',
-        content:{eyebrow:'Your Situation — '+CUSTOMER,title:'What We Heard From You',body:bullets,theme:'wash'}});
-    }
-    SLOTS.push({id:'solution',name:'Our Solution',type:'swap'});
-    if(document.getElementById('sopCase').checked)SLOTS.push({id:'case',name:'Case Study',type:'swap'});
-    if(document.getElementById('sopVideo').checked)SLOTS.push({id:'x_video_'+Date.now(),name:'Company Video',type:'custom',content:EXTRA.video.content});
-    SLOTS.push({id:'coverage',name:'Service Coverage',type:'fixed'});
-    if(document.getElementById('sopPrice').checked)SLOTS.push({id:'pricing',name:'Pricing Structure',type:'fixed'});
-    if(document.getElementById('sopTrial').checked)SLOTS.push({id:'x_trial_'+Date.now(),name:'Trial Proposal',type:'custom',content:EXTRA.trial.content});
-    SLOTS.push({id:'closing',name:'Next Steps',type:'fixed'});
-    activeSlot=0;setView('builder');renderBuilder(true);
-    toast('Deck generated for '+CUSTOMER+' — ~4,200 tokens ≈ ฿0.4 est. (Haiku)');
-  },2300);
+  const tick=setInterval(()=>{si=(si+1)%steps.length;document.getElementById('aiStep').textContent=steps[si];},650);
+
+  CUSTOMER=brief.customer; industry=brief.industry; chosen={}; attachments={};
+  let deck=null, usage=null, failed=false;
+  try{
+    const res=await fetch(WORKER_URL+'/ai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(brief)});
+    const body=await res.json().catch(()=>({}));
+    if(res.ok && body.deck && Array.isArray(body.deck.slots)){ deck=body.deck; usage=body.usage; }
+    else failed=true;
+  }catch(e){ failed=true; }
+
+  clearInterval(tick); load.classList.add('hidden');
+  SLOTS = deck ? buildSlotsFromDeck(deck) : assembleDeckLocally(brief);
+  if(!SLOTS.length) SLOTS=assembleDeckLocally(brief);
+  activeSlot=0; setView('builder'); renderBuilder(true);
+  if(failed){ toast('AI unavailable — assembled from template'); }
+  else { const tok=usage?((usage.input_tokens||0)+(usage.output_tokens||0)):0;
+         toast('Deck generated for '+CUSTOMER+(tok?(' — ~'+tok+' tokens (Haiku)'):' (Haiku)')); }
 }
 function setRole(r){
+  if(r==='manager' && !AUTH.isManager){ toast('Manager tools are restricted'); return; }
   role=r;
   document.getElementById('roleManager').classList.toggle('on',r==='manager');
   document.getElementById('roleSales').classList.toggle('on',r==='sales');
@@ -731,19 +929,34 @@ async function addMedia(){
       body:file
     });
     if(!res.ok){const e=await res.json().catch(()=>({}));throw new Error(e.error||('Upload failed ('+res.status+')'));}
-    const {publicUrl}=await res.json();
-    /* Save the reference — in memory here; in production replace this line with an insert into Supabase */
-    MEDIA.unshift({id:'m'+Date.now(),name,type,url:publicUrl,ph:type==='video'?'🎬':'🖼',status:'approved'});
+    const up=await res.json();
+    const publicUrl=up.publicUrl;
+    /* Persist the reference in Supabase (RLS: managers only). The file already lives on R2. */
+    const ins=await sbRest('POST','deckstudio_media',
+      {name,type,url:publicUrl,r2_key:up.key||null,status:'approved'},'return=representation');
+    if(!ins.ok){ const e=await ins.json().catch(()=>({})); throw new Error(e.message||'On R2 but DB save failed — check permissions'); }
+    const row=(await ins.json())[0];
+    MEDIA.unshift({id:row.id,name:row.name,type:row.type,url:row.url,r2_key:row.r2_key,status:row.status,ph:row.type==='video'?'🎬':'🖼'});
     fileInput.value='';document.getElementById('inName').value='';
-    renderMedia();toast('Uploaded — saved as an R2 URL');
+    renderMedia();toast('Uploaded & saved to library');
   }catch(err){
     toast('Error: '+err.message);
   }finally{
     btn.disabled=false;
   }
 }
-function approveMedia(id){const m=MEDIA.find(x=>x.id===id);if(m)m.status='approved';renderMedia();toast('Approved — now visible to sales team');}
-function deleteMedia(id){MEDIA=MEDIA.filter(x=>x.id!==id);renderMedia();toast('Removed from library (file stays on R2)');}
+async function approveMedia(id){
+  const res=await sbRest('PATCH','deckstudio_media?id=eq.'+id,{status:'approved'},'return=minimal');
+  if(!res.ok){ toast('Approve failed — managers only'); return; }
+  const m=MEDIA.find(x=>x.id===id);if(m)m.status='approved';
+  renderMedia();toast('Approved — now visible to sales team');
+}
+async function deleteMedia(id){
+  const res=await sbRest('DELETE','deckstudio_media?id=eq.'+id,undefined,'return=minimal');
+  if(!res.ok){ toast('Delete failed — managers only'); return; }
+  MEDIA=MEDIA.filter(x=>x.id!==id);
+  renderMedia();toast('Removed from library (file stays on R2)');
+}
 
 /* Present */
 function openPresent(){presentIdx=view==='builder'?activeSlot:0;document.getElementById('present').classList.add('show');renderPresent();
@@ -763,7 +976,26 @@ let toastTimer;
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
   clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2400);}
 
-renderBuilder(false);
+/* ============ BOOT ============ */
+function startApp(){
+  hideLogin();
+  role = AUTH.isManager ? 'manager' : 'sales';
+  applyAuthUI();
+  renderBuilder(false);
+  loadMedia();               /* async — fills MEDIA then re-renders the relevant view */
+}
+async function boot(){
+  restoreSession();
+  if(AUTH.token){
+    const st=await resolveManager();      /* also validates the stored token */
+    if(st==='unauth'){ clearSession(); showLogin(); return; }
+    startApp(); return;
+  }
+  showLogin();
+}
+document.getElementById('loginPass').addEventListener('keydown',e=>{ if(e.key==='Enter') doLogin(); });
+document.getElementById('loginEmail').addEventListener('keydown',e=>{ if(e.key==='Enter') document.getElementById('loginPass').focus(); });
+boot();
 </script>
 </body>
 </html>
