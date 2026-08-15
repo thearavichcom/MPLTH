@@ -596,12 +596,17 @@ function renderTemplates(){
 async function uploadTemplate(){
   const fi=document.getElementById('tplFile'); const file=fi.files[0];
   if(!file){toast('Choose a .pptx file first');return;}
+  const low=file.name.toLowerCase();
+  const ct = low.endsWith('.pptx') ? 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+           : low.endsWith('.ppt')  ? 'application/vnd.ms-powerpoint'
+           : '';
+  if(!ct){toast('Please choose a .pptx or .ppt file');return;}
   const name=document.getElementById('tplName').value.trim()||file.name;
   const btn=document.getElementById('btnTplUpload'); btn.disabled=true;
   try{
     toast('Uploading template…');
     const res=await fetch(WORKER_URL,{method:'POST',
-      headers:{'Content-Type':file.type||'application/vnd.openxmlformats-officedocument.presentationml.presentation','X-File-Name':encodeURIComponent(file.name)},
+      headers:{'Content-Type':ct,'X-File-Name':encodeURIComponent(file.name)},
       body:file});
     if(!res.ok){const e=await res.json().catch(()=>({}));throw new Error(e.error||('Upload failed ('+res.status+')'));}
     const up=await res.json();
