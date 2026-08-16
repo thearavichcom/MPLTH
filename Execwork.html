@@ -1569,7 +1569,7 @@ let RLS={
 /* Notices surfaced inside modules (approvals etc.) */
 let NOTICES={today:[]};
 const ownerTag=by=>by===me?`<button class="icon-btn" title="Owned by you"><i class="ti ti-pencil"></i></button>`:`<i class="ti ti-lock lock-i" title="Created by ${by} — view only"></i>`;
-const trashBtn=(by,fn)=>by===me?`<button class="icon-btn" title="Delete" onclick="${fn}"><i class="ti ti-trash"></i></button>`:'';
+const trashBtn=(by,fn)=>by===me?`<button class="icon-btn" title="Delete" onclick="${fn}">${mi('trash',16)}</button>`:'';
 
 function persist(){/* data lives in Supabase now; writes go through dbAdd/dbUpdate/dbDel */}
 function hydrate(){/* replaced by loadAll() — data comes from Supabase */}
@@ -2469,7 +2469,7 @@ function setOpsSub(k){if(k!==opsSub)sopEdit=null;opsSub=k;go('operations');}
 function viewCredentials(){
   const types=['All','Sea line','Airline','Customs','Other'];
   const pills=types.map(t=>`<button class="cat-pill${credFilter===t?' on':''}" onclick="setCF('${t}')">${t}</button>`).join('');
-  const rows=CREDS.map((c,i)=>({c,i})).filter(o=>credFilter==='All'||o.c.type===credFilter).map(({c,i})=>`<div class="cred"><div class="ci"><i class="ti ${c.type==='Airline'?'ti-plane':c.type==='Customs'?'ti-building-bank':'ti-ship'}"></i></div><div class="cn"><div class="s">${esc(c.sys)} <span class="chip" style="font-size:11px;margin-left:4px">${esc(c.type)}</span></div><div class="u">${esc(c.url)} · ${esc(c.user)}</div></div><span class="pw" id="pw${i}">${credShow[i]?esc(c.pw):'••••••••'}</span><button class="icon-btn" title="Show / hide" onclick="togglePw(${i})"><i class="ti ${credShow[i]?'ti-eye-off':'ti-eye'}"></i></button><button class="icon-btn" title="Copy" onclick="copyPw('${esc(c.pw)}')"><i class="ti ti-copy"></i></button>${trashBtn(c.by,'delCred('+i+')')}${ownerTag(c.by)}</div>`).join('');
+  const rows=CREDS.map((c,i)=>({c,i})).filter(o=>credFilter==='All'||o.c.type===credFilter).map(({c,i})=>`<div class="cred"><div class="ci"><i class="ti ${c.type==='Airline'?'ti-plane':c.type==='Customs'?'ti-building-bank':'ti-ship'}"></i></div><div class="cn"><div class="s">${esc(c.sys)} <span class="chip" style="font-size:11px;margin-left:4px">${esc(c.type)}</span></div><div class="u">${esc(c.url)} · ${esc(c.user)}</div></div><span class="pw" id="pw${i}">${credShow[i]?esc(c.pw):'••••••••'}</span><button class="icon-btn" title="Show / hide" onclick="togglePw(${i})"><i class="ti ${credShow[i]?'ti-eye-off':'ti-eye'}"></i></button><button class="icon-btn" title="Copy" onclick="copyPw('${esc(c.pw)}')"><i class="ti ti-copy"></i></button>${c.by===me?`<button class="icon-btn" title="Edit" onclick="editCred(${i})">${mi('pencil')}</button>`:''}${trashBtn(c.by,'delCred('+i+')')}${ownerTag(c.by)}</div>`).join('');
   return `<div class="mod-intro"><div class="row-between"><p>Shared logins for carrier systems — sea lines, airlines and customs portals. Passwords stay hidden until you reveal them.</p><button class="btn-primary btn" onclick="addCred()"><i class="ti ti-plus"></i>New credential</button></div></div><div class="cats">${pills}</div><div style="border-top:1px solid var(--line)">${rows}</div><div class="empty-hint"><i class="ti ti-shield-lock"></i>In the live version these are encrypted at rest; only owners and granted managers can view.</div>`;
 }
 function setCF(t){credFilter=t;go('operations');}
@@ -2480,6 +2480,11 @@ async function delCred(i){const c=CREDS[i];if(!c||c.by!==me)return;
 function addCred(){openModal('New credential',[{name:'sys',label:'System',type:'text'},{name:'type',label:'Type',type:'select',options:['Sea line','Airline','Customs','Other'],val:'Sea line'},{name:'url',label:'URL',type:'text'},{name:'user',label:'Username',type:'text'},{name:'pw',label:'Password',type:'text'}],async v=>{
   const r=await dbAdd('creds',{sys:v.sys,type:v.type,url:v.url||'',user:v.user||'',pw:v.pw||''});
   if(r)CREDS.unshift(r);});}
+function editCred(i){const c=CREDS[i];if(!c||c.by!==me)return;
+  openModal('Edit credential',[{name:'sys',label:'System',type:'text',val:c.sys},{name:'type',label:'Type',type:'select',options:['Sea line','Airline','Customs','Other'],val:c.type},{name:'url',label:'URL',type:'text',val:c.url},{name:'user',label:'Username',type:'text',val:c.user},{name:'pw',label:'Password',type:'text',val:c.pw}],async v=>{
+    const patch={system:v.sys,cred_type:v.type,url:v.url||'',username:v.user||'',secret:v.pw||''};
+    const r=await dbUpdate('creds',c.id,patch);
+    if(r)CREDS[i]=r;});}
 
 /* ---- budget ---- */
 /* ---- sales & performance · monthly metrics per salesperson ---- */
@@ -2793,7 +2798,7 @@ function viewLog(key){
   const canAch=ACHIEVE_LOGS.has(key);
   const canDetail=DETAIL_LOGS.has(key);
   const detailOf=e=>(canDetail&&e.detail)?`<div style="font-size:12.5px;color:var(--muted);margin-top:3px;line-height:1.5">${esc(e.detail)}</div>`:'';
-  const rowHtml=(e,ei,done)=>`<div class="entry"${done?' style="opacity:.72"':''}><div class="body"><div class="title">${esc(e.title)}</div>${detailOf(e)}<div class="meta">${e.cats.map(c=>`<span class="chip">${esc(c)}</span>`).join('')}${e.link?'<span class="lnk"><i class="ti ti-external-link" style="font-size:13px"></i>Drive link</span>':''}<span class="ts">${e.at}</span><span class="by">· ${e.by}</span></div></div><div class="acts">${canAch?`<button class="btn" style="font-size:12px;padding:4px 10px" onclick="toggleAchieved('${key}',${ei})"><i class="ti ti-${done?'arrow-back-up':'circle-check'}"></i>${done?'Reopen':'Achieved'}</button>`:''}${trashBtn(e.by,"delLog('"+key+"',"+ei+")")}${ownerTag(e.by)}</div></div>`;
+  const rowHtml=(e,ei,done)=>`<div class="entry"${done?' style="opacity:.72"':''}><div class="body"><div class="title">${esc(e.title)}</div>${detailOf(e)}<div class="meta">${e.cats.map(c=>`<span class="chip">${esc(c)}</span>`).join('')}${e.link?'<span class="lnk"><i class="ti ti-external-link" style="font-size:13px"></i>Drive link</span>':''}<span class="ts">${e.at}</span><span class="by">· ${e.by}</span></div></div><div class="acts">${canAch?`<button class="btn" style="font-size:12px;padding:4px 10px" onclick="toggleAchieved('${key}',${ei})"><i class="ti ti-${done?'arrow-back-up':'circle-check'}"></i>${done?'Reopen':'Achieved'}</button>`:''}${e.by===me?`<button class="icon-btn" title="Edit" onclick="editLogEntry('${key}',${ei})">${mi('pencil')}</button>`:''}${trashBtn(e.by,"delLog('"+key+"',"+ei+")")}${ownerTag(e.by)}</div></div>`;
   let rows,achSection='';
   if(canAch){
     const actL=list.filter(o=>!o.e.achieved),dnL=list.filter(o=>o.e.achieved);
@@ -2812,6 +2817,14 @@ function addLogEntry(key){const fs=[{name:'title',label:'Title',type:'text',ph:'
   openModal('New entry',fs,async v=>{
   const r=await dbAdd('logs',{module_key:key,title:v.title,cats:v.cats.length?v.cats:['General'],link:v.link==='Yes',detail:v.detail||null});
   if(r)LOGS[key].entries.unshift(r);});}
+function editLogEntry(key,ei){const e=LOGS[key].entries[ei];if(!e||e.by!==me)return;
+  const fs=[{name:'title',label:'Title',type:'text',val:e.title}];
+  if(DETAIL_LOGS.has(key))fs.push({name:'detail',label:'Detail',type:'textarea',val:e.detail||''});
+  fs.push({name:'cats',label:'Categories (comma-separated)',type:'tags',val:(e.cats||[]).join(', ')},{name:'link',label:'Has a Drive/OneDrive link?',type:'select',options:['No','Yes'],val:e.link?'Yes':'No'});
+  openModal('Edit entry',fs,async v=>{
+    const patch={title:v.title,categories:v.cats.length?v.cats:['General'],has_link:v.link==='Yes',detail:v.detail||null};
+    const r=await dbUpdate('logs',e.id,patch);
+    if(r)LOGS[key].entries[ei]=r;});}
 
 /* ---- office supplies ---- */
 /* =====================================================================
@@ -5775,7 +5788,7 @@ function viewAgents(){
     <div style="margin:0 0 12px"><input class="search" placeholder="Search agents\u2026" value="${esc(agentSearch||'')}" oninput="agentSearch=this.value;go('dailyops')" style="max-width:320px"/></div>
     <div class="tblwrap"><table class="mtable"><thead><tr><th>Agent</th><th>Country</th><th>Port</th><th>Email</th><th>Status</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
-function addAgent(){openModal('New agent',[{name:'name',label:'Agent name',type:'text',ph:'e.g. Nippon Express'},{name:'country',label:'Country',type:'text',ph:'Japan'},{name:'port_code',label:'Port code',type:'text',ph:'JPYOK'},{name:'email',label:'Contact email',type:'text',ph:'ops@agent.example'},{name:'is_active',label:'Status',type:'select',options:['Active','Inactive'],val:'Active'}],async v=>{
+function addAgent(){openModal('New agent',[{name:'name',label:'Agent name',type:'text',ph:'Agent name'},{name:'country',label:'Country',type:'text',ph:'Japan'},{name:'port_code',label:'Port code',type:'text',ph:'JPYOK'},{name:'email',label:'Contact email',type:'text',ph:'ops@agent.example'},{name:'is_active',label:'Status',type:'select',options:['Active','Inactive'],val:'Active'}],async v=>{
   if(!v.name){toast('Agent name is required',true);return;}
   const r=await dbAdd('agents',{name:v.name,country:v.country||'',email:v.email||'',port_code:v.port_code||'',is_active:v.is_active!=='Inactive'});
   if(r){AGENTS.push(r);go('dailyops');}});}
@@ -5796,7 +5809,7 @@ async function delAgent(id){const a=(AGENTS||[]).find(x=>String(x.id)===String(i
    =================================================================== */
 var CHATCH=[],CHATMSG={},CHATREAD={},chatMemberIds={},chatOpen=null,CHATSUB=null;
 
-function chatMapMsg(r){return {id:r.id,channel_id:r.channel_id,uid:r.sender_uid,body:r.body,edited:r.edited_at||null,at:r.created_at,by:codeOf(r.sender_uid),mine:r.sender_uid===MY.uid};}
+function chatMapMsg(r){return {id:r.id,channel_id:r.channel_id,uid:r.sender_uid,body:r.body,edited:r.edited_at||null,at:r.created_at,by:codeOf(r.sender_uid),mine:r.sender_uid===MY.uid,unsent:!!r.unsent};}
 
 async function loadChat(){
   CHATCH=[];CHATMSG={};CHATREAD={};chatMemberIds={};
@@ -5887,14 +5900,14 @@ function renderChatList(){const el=document.getElementById('chatList');if(el)el.
 function chatMsgHtml(m,c){
   const u=USERS_DATA.find(x=>x.auth_id===m.uid);
   const nm=u?fullName(u):(m.by||'User');
-  const tools=m.mine
-    ?`<span class="chat-tools"><button onclick="editMsg('${m.id}')" title="Edit">${mi('pencil',13)}</button><button onclick="delMsg('${m.id}')" title="Delete">${mi('trash',13)}</button></span>`
-    :(isOwner()?`<span class="chat-tools"><button onclick="delMsg('${m.id}')" title="Delete">${mi('trash',13)}</button></span>`:'');
+  const tools=m.unsent?'':(m.mine
+    ?`<span class="chat-tools"><button onclick="editMsg('${m.id}')" title="Edit">${mi('pencil',13)}</button><button onclick="unsendMsg('${m.id}')" title="Unsend">${mi('arrowleft',13)}</button></span>`
+    :'');
   return `<div class="chat-msg${m.mine?' me':''}">
      <div class="chat-msg-av av ${acls(m.by)}">${esc(m.by||'?')}</div>
      <div class="chat-msg-b">
        <div class="chat-msg-top"><span class="chat-msg-nm">${esc(nm)}</span><span class="ts">${fmtChatTime(m.at)}${m.edited?' · edited':''}</span>${tools}</div>
-       <div class="chat-msg-tx">${esc(m.body)}</div>
+       <div class="chat-msg-tx"${m.unsent?' style="opacity:.55;font-style:italic"':''}>${m.unsent?'Message unsent':esc(m.body)}</div>
      </div></div>`;
 }
 function chatThreadHtml(){
@@ -5957,12 +5970,12 @@ function editMsg(id){
       if(error)throw error;const i=arr.findIndex(x=>x.id===id);if(i>=0)arr[i]=chatMapMsg(data);renderMsgs();
     }catch(e){dbErr(e,'edit message');}});
 }
-async function delMsg(id){
-  const arr=CHATMSG[chatOpen]||[];const m=arr.find(x=>x.id===id);if(!m)return;if(!m.mine&&!isOwner())return;
-  if(!confirm('Delete this message?'))return;
-  try{const {error}=await sb().from('chat_messages').delete().eq('id',id);if(error)throw error;
-    const i=arr.findIndex(x=>x.id===id);if(i>=0)arr.splice(i,1);renderMsgs();
-  }catch(e){dbErr(e,'delete message');}
+async function unsendMsg(id){
+  const arr=CHATMSG[chatOpen]||[];const m=arr.find(x=>x.id===id);if(!m||!m.mine||m.unsent)return;
+  if(!confirm('Unsend this message? It will be hidden from everyone but kept on record.'))return;
+  try{const {data,error}=await sb().from('chat_messages').update({unsent:true}).eq('id',id).select().single();
+    if(error)throw error;const i=arr.findIndex(x=>x.id===id);if(i>=0)arr[i]=chatMapMsg(data);renderMsgs();
+  }catch(e){dbErr(e,'unsend message');}
 }
 
 /* ---- groups (owner only) ---- */
