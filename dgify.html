@@ -85,6 +85,24 @@
   .card-foot .save{font-size:11.5px;color:var(--blue);cursor:pointer;font-weight:600;background:none;border:none}
   .card-foot .valid{font-size:11.5px;margin-left:auto}.valid.warn{color:#B45309}.valid.good{color:#166534}
   /* ---- overpack panel ---- */
+  /* ---- AI context panel (step 1) ---- */
+  .ai-cfg{margin-top:14px;border:1px solid var(--line);border-radius:12px;background:#FAFBFD;overflow:hidden}
+  .ai-head{display:flex;align-items:center;gap:9px;padding:11px 14px;cursor:pointer}
+  .ai-head h3{font-size:13px;font-weight:600;color:var(--navy)}
+  .ai-head .sub{font-size:11.5px;color:var(--muted)}
+  .ai-head .caret{margin-left:auto;color:var(--muted);transition:.2s}
+  .ai-cfg.open .caret{transform:rotate(180deg)}
+  .ai-body{display:none;padding:0 14px 14px;flex-direction:column;gap:10px}
+  .ai-cfg.open .ai-body{display:flex}
+  .ai-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;font-size:12.5px}
+  .ai-row select{font-family:'Inter';font-size:12.5px;padding:7px 9px;border:1px solid var(--line);border-radius:8px;background:#fff;min-width:230px}
+  .ai-row .chk{display:flex;align-items:center;gap:6px;color:var(--ink);cursor:pointer}
+  .ai-cfg textarea{font-family:'Inter';font-size:12.5px;padding:9px 11px;border:1px solid var(--line);border-radius:9px;width:100%;min-height:64px;resize:vertical;background:#fff;color:var(--ink)}
+  .ai-cfg textarea:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-soft)}
+  .ai-edit{border:1px dashed #C7D2FE;border-radius:10px;padding:12px;background:#fff;display:flex;flex-direction:column;gap:9px}
+  .ai-edit input{font-family:'Inter';font-size:12.5px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;width:100%}
+  .ai-edit textarea{min-height:150px}
+  .ai-msg{font-size:11.5px;color:var(--muted)}.ai-msg.err{color:var(--red)}.ai-msg.ok{color:var(--green)}
   .op-panel{border:1px solid #C7D2FE;background:linear-gradient(180deg,#F8FAFF,#fff);border-radius:12px;padding:14px 16px;margin-bottom:16px}
   .ocean-mode .op-panel{border-color:#99F6E4;background:linear-gradient(180deg,#F5FFFD,#fff)}
   .op-head{display:flex;align-items:center;gap:9px;margin-bottom:10px}
@@ -181,6 +199,32 @@
         <div class="drop" id="dropBK"><div class="tag opt">Optional</div><div class="ic">🎫</div><div class="big">Booking Confirmation</div><div class="small">flight/voyage · container</div><input type="file" id="inputBK" accept="application/pdf" multiple hidden></div>
       </div>
       <div class="filelist" id="fileList"></div>
+
+      <div class="ai-cfg" id="aiCfg">
+        <div class="ai-head" onclick="document.getElementById('aiCfg').classList.toggle('open')">
+          <span>🧠</span><h3>คำสั่งเพิ่มเติมให้ AI</h3>
+          <span class="sub">Master prompt อยู่ใน dg-api · ตรงนี้คือส่วนเสริมต่องาน</span><span class="caret">▾</span>
+        </div>
+        <div class="ai-body">
+          <div class="ai-row">
+            <span>Profile ผู้ส่ง / กลุ่มสินค้า</span>
+            <select id="profileSel"></select>
+            <button class="btn btn-ghost btn-sm" id="profEdit">✎ จัดการ profile</button>
+            <label class="chk"><input type="checkbox" id="useMaster" checked> ส่ง DG Master Library (<span id="masterN">0</span> รายการ) ให้ AI จับคู่</label>
+          </div>
+          <textarea id="jobHints" placeholder="โน้ตเฉพาะงานนี้ เช่น &quot;Packing List หน้า 2 ตารางล่างคือของจริง หน้า 1 ยกเลิก&quot; · &quot;ถังเปล่าไม่ต้องนับ&quot; · &quot;สินค้าอยู่ 2 พาเลท 40 ถัง/พาเลท&quot;"></textarea>
+          <div class="ai-edit hidden" id="profEditor">
+            <input id="profName" placeholder="ชื่อ profile เช่น DG Packaging (Thailand) — fragrances">
+            <textarea id="profBody" placeholder="บริบทที่ใช้ซ้ำได้: สินค้ากลุ่มไหน UN อะไรบ่อย ชื่อสินค้าอยู่ตรงไหนของ SDS หน่วยบรรจุมาตรฐาน ฯลฯ"></textarea>
+            <div class="btn-row" style="margin-top:0">
+              <button class="btn btn-primary btn-sm" id="profSave">💾 บันทึก</button>
+              <button class="btn btn-ghost btn-sm" id="profNew">+ profile ใหม่</button>
+              <button class="btn btn-ghost btn-sm" id="profDel">🗑 ลบ</button>
+              <span class="ai-msg" id="profMsg"></span>
+            </div>
+          </div>
+        </div>
+      </div>
       <div class="btn-row">
         <button class="btn btn-primary" id="extractBtn" disabled><span id="extractLabel">✨ Extract with AI</span></button>
         <button class="btn btn-ghost btn-sm" onclick="loadSample()">👁 Load sample (demo)</button>
@@ -192,6 +236,7 @@
   <section class="step hidden" id="step-review">
     <div class="step-head"><div class="step-num">2</div><h2>Review Dangerous Goods</h2><div class="hint">yellow = AI not confident</div></div>
     <div class="step-body">
+      <div class="banner amber hidden" id="aiNotes"><span>📝</span><div><b>AI หมายเหตุ:</b> <span id="aiNotesTxt"></span></div></div>
       <div class="op-panel hidden" id="opPanel">
         <div class="op-head"><span>📦</span><h3>Overpack grouping</h3><span class="sub">รวมหลายรายการเข้าพาเลท / กล่องรวม — จะขึ้นบรรทัด “OVERPACK USED #n / TOTAL NET QUANTITY” ในเอกสาร</span></div>
         <div class="op-tools">
@@ -283,7 +328,7 @@ if (LIVE) {
 }
 
 const state = { mode:'air', sds:[], pl:[], bk:[], items:[], master:[], me:null, customers:[],
-                overpackCount:0, overpackMeta:{} };
+                overpackCount:0, overpackMeta:{}, profiles:[], profileId:null };
 window.state = state;
 
 // ============================ AUTH ============================
@@ -301,6 +346,7 @@ async function refreshSession(){
   document.getElementById('whoami').innerHTML = `<span>${who}</span> · <a onclick="logout()">Sign out</a>`;
   await loadMaster();
   await loadCustomers();
+  await loadProfiles();
 }
 
 // pull existing CRM customers to autofill shipper / consignee
@@ -358,9 +404,85 @@ async function loadMaster(){
 }
 function renderMaster(){
   masterCount.textContent = state.master.length + ' products' + (LIVE?'':' (demo)');
+  const mn=document.getElementById('masterN'); if(mn) mn.textContent = state.master.length;
   masterBody.innerHTML = state.master.map((p,i)=>`<div class="chip"><span class="un">${p.un_number||'—'}</span><span>${p.product_name}</span><span class="cls">${p.class_division||'?'}</span><button onclick="addFromMaster(${i})">+</button></div>`).join('');
 }
 window.addFromMaster = (i) => { state.items.push({...state.master[i], confidence:{}, _matched:false}); showReview(); renderCards(); document.getElementById('step-review').scrollIntoView({behavior:'smooth'}); };
+
+// ============================ PROMPT PROFILES ============================
+const esc = s => String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+async function loadProfiles(){
+  if (LIVE){
+    const { data, error } = await supa.from('dgd_prompt_profiles').select('*').order('name');
+    if (error){ profMsg.textContent = 'โหลด profile ไม่ได้: '+error.message; profMsg.className='ai-msg err'; }
+    state.profiles = data || [];
+    const def = state.profiles.find(p=>p.is_default);
+    if (def && !state.profileId) state.profileId = def.id;
+  } else {
+    state.profiles = [];
+  }
+  renderProfiles();
+}
+function renderProfiles(){
+  const sel=document.getElementById('profileSel'); if(!sel) return;
+  sel.innerHTML = '<option value="">— ไม่ใช้ profile —</option>' +
+    state.profiles.map(p=>`<option value="${p.id}" ${state.profileId===p.id?'selected':''}>${esc(p.name)}</option>`).join('') +
+    (LIVE?'':'<option value="" disabled>(demo mode — ต้อง login ถึงจะมี profile)</option>');
+  const n=document.getElementById('masterN'); if(n) n.textContent = state.master.length;
+}
+function currentProfile(){ return state.profiles.find(p=>p.id===state.profileId) || null; }
+document.getElementById('profileSel').onchange = e => {
+  state.profileId = e.target.value || null;
+  const p=currentProfile();
+  if(p && !document.getElementById('profEditor').classList.contains('hidden')){
+    profName.value=p.name||''; profBody.value=p.body||'';
+  }
+};
+document.getElementById('profEdit').onclick = () => {
+  const box=document.getElementById('profEditor'); box.classList.toggle('hidden');
+  const p=currentProfile();
+  profName.value=p?p.name:''; profBody.value=p?p.body:'';
+  profMsg.textContent=''; profMsg.className='ai-msg';
+};
+document.getElementById('profNew').onclick = () => {
+  state.profileId=null; renderProfiles(); profName.value=''; profBody.value='';
+  profMsg.textContent='กรอกชื่อ + เนื้อหา แล้วกดบันทึก'; profMsg.className='ai-msg';
+};
+document.getElementById('profSave').onclick = async () => {
+  if(!LIVE) return alert('demo mode — ต้องต่อ Supabase ก่อน');
+  const name=profName.value.trim(), body=profBody.value.trim();
+  if(!name) { profMsg.textContent='ต้องมีชื่อ profile'; profMsg.className='ai-msg err'; return; }
+  const row = state.profileId ? { id:state.profileId, name, body } : { name, body };
+  const { data, error } = await supa.from('dgd_prompt_profiles').upsert(row).select().single();
+  if(error){
+    profMsg.textContent = /row-level security|policy/i.test(error.message)
+      ? 'ไม่มีสิทธิ์แก้ profile — เฉพาะ GM / COM / Manager เท่านั้น'
+      : error.message;
+    profMsg.className='ai-msg err'; return;
+  }
+  state.profileId = data.id;
+  profMsg.textContent='บันทึกแล้ว'; profMsg.className='ai-msg ok';
+  await loadProfiles();
+};
+document.getElementById('profDel').onclick = async () => {
+  if(!LIVE || !state.profileId) return;
+  if(!confirm('ลบ profile นี้?')) return;
+  const { error } = await supa.from('dgd_prompt_profiles').delete().eq('id', state.profileId);
+  if(error){ profMsg.textContent=error.message; profMsg.className='ai-msg err'; return; }
+  state.profileId=null; profName.value=''; profBody.value='';
+  profMsg.textContent='ลบแล้ว'; profMsg.className='ai-msg ok';
+  await loadProfiles();
+};
+// compact one-line-per-product view of dg_master for the model to match against
+function masterCompact(){
+  return state.master.slice(0,400).map(m=>[
+    m.product_name, m.item_code, m.un_number, m.proper_shipping_name, m.class_division,
+    m.packing_group, m.packing_instruction, m.ems,
+    m.marine_pollutant?'MP':'', m.not_regulated?'NOT-REGULATED':''
+  ].map(x=>String(x==null?'':x).replace(/\|/g,'/').trim()).join(' | ')).join('\n');
+}
+window.masterCompact = masterCompact;
 
 // ============================ UPLOAD ============================
 function wireDrop(dropId, inputId, bucket){
@@ -414,8 +536,15 @@ extractBtn.onclick = async () => {
     // send to Claude via dg-api
     const documents=[];
     for (const e of all){ documents.push({ media_type:'application/pdf', data: await fileToB64(e.file) }); }
-    const out = await callApi({ action:'extract', documents });
-    if (out.error){ alert('Extraction failed: '+out.error); return; }
+    const p = currentProfile();
+    const out = await callApi({ action:'extract', documents,
+      hints: (document.getElementById('jobHints').value||'').trim() || undefined,
+      profile: p ? `${p.name}\n${p.body||''}` : undefined,
+      master: document.getElementById('useMaster').checked ? masterCompact() : undefined });
+    if (out.error){ alert('Extraction failed: '+out.error + (out.raw?'\n\n---\n'+out.raw.slice(0,300):'')); return; }
+    const nb=document.getElementById('aiNotes');
+    nb.classList.toggle('hidden', !out.notes);
+    if (out.notes) document.getElementById('aiNotesTxt').textContent = out.notes;
     state.items = (out.products||[]).map(p=>({...p,confidence:p.confidence||{},_matched:!!p.matched}));
     if (out.booking) applyBooking(out.booking);
     showReview(); renderCards();
@@ -803,7 +932,7 @@ window.saveDeclaration = async () => {
 // ============================ INIT ============================
 setMode('air');
 refreshSession();
-if (!LIVE) loadMaster();
+if (!LIVE) { loadMaster(); loadProfiles(); }
 </script>
 </body>
 </html>
