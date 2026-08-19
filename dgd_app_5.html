@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DGIFY — DGD Generator</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<style>
+  :root{--navy:#0F172A;--blue:#2563EB;--blue-soft:#EFF4FF;--ink:#1E293B;--muted:#64748B;
+    --line:#E2E8F0;--bg:#F1F5F9;--white:#fff;--amber:#F59E0B;--amber-soft:#FEF3C7;
+    --red:#DC2626;--green:#16A34A;--teal:#0D9488;--teal-soft:#F0FDFA;
+    --radius:14px;--shadow:0 1px 3px rgba(15,23,42,.08),0 8px 24px rgba(15,23,42,.06)}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5;-webkit-font-smoothing:antialiased}
+  h1,h2,h3{font-family:'Poppins',sans-serif}
+  header.topbar{background:var(--navy);color:#fff;padding:14px 24px;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:50;flex-wrap:wrap}
+  .logo{font-family:'Poppins';font-weight:600;font-size:18px;display:flex;align-items:center;gap:9px}
+  .chev{color:var(--blue);font-size:22px}.logo .sub{font-weight:400;font-size:11.5px;color:#94A3B8}
+  .mode-toggle{margin-left:auto;display:flex;background:#1E293B;border-radius:11px;padding:4px;gap:2px}
+  .mode-toggle button{font-family:'Poppins';font-weight:500;font-size:13px;border:none;background:none;color:#94A3B8;padding:8px 18px;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:7px;transition:.15s}
+  .mode-toggle button.active{background:var(--blue);color:#fff}.mode-toggle button.active.ocean{background:var(--teal)}
+  .whoami{font-size:12px;color:#94A3B8;display:flex;align-items:center;gap:10px}
+  .whoami a{color:#CBD5E1;cursor:pointer;text-decoration:underline}
+  .wrap{max-width:1120px;margin:0 auto;padding:24px 20px 90px}
+  .banner{border-radius:12px;padding:13px 18px;font-size:12.5px;display:flex;gap:11px;align-items:flex-start;margin-bottom:16px}
+  .banner.amber{background:var(--amber-soft);border:1px solid #FCD34D;color:#92400E}
+  .banner.blue{background:var(--blue-soft);border:1px solid #BFDBFE;color:#1E40AF}
+  .banner b{font-weight:600}
+  .master{background:linear-gradient(180deg,#fff,#FAFBFF);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:20px;overflow:hidden}
+  .master-head{padding:14px 20px;display:flex;align-items:center;gap:12px;cursor:pointer}
+  .master-head .ic{width:30px;height:30px;border-radius:9px;background:#EEF2FF;color:var(--blue);display:grid;place-items:center;font-size:15px}
+  .master-head h2{font-size:15px;font-weight:600;color:var(--navy)}
+  .master-head .count{font-size:12px;color:var(--muted);margin-left:auto}.master-head .caret{color:var(--muted);transition:.2s}
+  .master.open .caret{transform:rotate(180deg)}
+  .master-body{padding:0 20px 18px;display:none;flex-wrap:wrap;gap:9px}.master.open .master-body{display:flex}
+  .chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:7px 8px 7px 14px;font-size:12.5px;display:flex;align-items:center;gap:9px}
+  .chip .un{font-family:'Poppins';font-weight:600;color:var(--navy)}
+  .chip .cls{background:#EEF2FF;color:var(--blue);border-radius:6px;padding:1px 6px;font-size:10.5px;font-weight:600}
+  .chip button{border:none;background:var(--blue-soft);color:var(--blue);border-radius:7px;width:24px;height:24px;cursor:pointer;font-size:15px;font-weight:600}
+  .chip button:hover{background:var(--blue);color:#fff}
+  .step{background:var(--white);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:20px;overflow:hidden}
+  .step-head{display:flex;align-items:center;gap:13px;padding:16px 20px;border-bottom:1px solid var(--line)}
+  .step-num{width:29px;height:29px;border-radius:9px;background:var(--blue-soft);color:var(--blue);font-family:'Poppins';font-weight:600;font-size:13px;display:grid;place-items:center}
+  .ocean-mode .step-num{background:var(--teal-soft);color:var(--teal)}
+  .step-head h2{font-size:15px;font-weight:600;color:var(--navy)}.step-head .hint{font-size:12px;color:var(--muted);margin-left:auto;text-align:right}
+  .step-body{padding:20px}
+  .three-up{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+  .drop{border:2px dashed #CBD5E1;border-radius:12px;padding:22px 14px;text-align:center;cursor:pointer;transition:.15s;background:#FAFBFD}
+  .drop:hover,.drop.drag{border-color:var(--blue);background:var(--blue-soft)}
+  .ocean-mode .drop:hover{border-color:var(--teal);background:var(--teal-soft)}
+  .drop .big{font-family:'Poppins';font-weight:500;font-size:13.5px;color:var(--navy)}
+  .drop .small{font-size:11px;color:var(--muted);margin-top:4px}.drop .ic{font-size:24px;margin-bottom:5px}
+  .drop .tag{display:inline-block;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:7px;background:#F1F5F9;padding:2px 9px;border-radius:6px}
+  .drop .tag.opt{color:var(--teal);background:var(--teal-soft)}
+  .filelist{margin-top:12px;display:flex;flex-direction:column;gap:7px}
+  .fileitem{display:flex;align-items:center;gap:10px;padding:9px 13px;border:1px solid var(--line);border-radius:9px;background:#fff;font-size:13px}
+  .fileitem .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.fileitem .sz{color:var(--muted);font-size:11.5px}
+  .fileitem .rm{cursor:pointer;color:var(--muted);border:none;background:none;font-size:16px}.fileitem .rm:hover{color:var(--red)}
+  .fileitem .up{font-size:11px;color:var(--green)}
+  .btn{font-family:'Poppins';font-weight:500;font-size:13.5px;border:none;border-radius:10px;padding:11px 20px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:.15s}
+  .btn-primary{background:var(--blue);color:#fff}.btn-primary:hover{background:#1D4FD8}
+  .ocean-mode .btn-primary{background:var(--teal)}.btn-primary:disabled{background:#94A3B8;cursor:not-allowed}
+  .btn-ghost{background:#fff;color:var(--navy);border:1px solid var(--line)}.btn-ghost:hover{border-color:var(--blue);color:var(--blue)}
+  .btn-dark{background:var(--navy);color:#fff}.btn-dark:hover{background:#1E293B}
+  .btn-row{margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}.btn-sm{padding:7px 13px;font-size:12.5px;border-radius:8px}
+  .spinner{width:15px;height:15px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}.hidden{display:none !important}
+  .dg-card{border:1px solid var(--line);border-radius:12px;margin-bottom:15px;overflow:hidden}
+  .dg-card-head{background:#F8FAFC;padding:11px 15px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--line)}
+  .dg-card-head .pname{font-family:'Poppins';font-weight:500;font-size:13.5px;color:var(--navy);flex:1}
+  .matchtag{font-size:10.5px;font-weight:600;padding:2px 8px;border-radius:6px}
+  .matchtag.ok{background:#F0FDF4;color:#166534}.matchtag.warn{background:#FFFBEB;color:#92400E}
+  .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:15px}
+  .field{display:flex;flex-direction:column;gap:4px}.field.wide{grid-column:span 2}
+  .field label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+  .field input,.field select{font-family:'Inter';font-size:13px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);width:100%}
+  .field input:focus,.field select:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-soft)}
+  .field.low input,.field.low select{border-color:var(--amber);background:#FFFBEB}
+  .field .flag{font-size:10px;color:var(--amber);font-weight:600}
+  .field.ocean-only{display:none}.ocean-mode .field.ocean-only{display:flex}
+  .card-remove{border:none;background:none;color:var(--muted);cursor:pointer;font-size:17px}.card-remove:hover{color:var(--red)}
+  .card-foot{padding:9px 15px;border-top:1px solid var(--line);display:flex;align-items:center;gap:10px}
+  .card-foot .save{font-size:11.5px;color:var(--blue);cursor:pointer;font-weight:600;background:none;border:none}
+  .card-foot .valid{font-size:11.5px;margin-left:auto}.valid.warn{color:#B45309}.valid.good{color:#166534}
+  /* ---- overpack panel ---- */
+  .op-panel{border:1px solid #C7D2FE;background:linear-gradient(180deg,#F8FAFF,#fff);border-radius:12px;padding:14px 16px;margin-bottom:16px}
+  .ocean-mode .op-panel{border-color:#99F6E4;background:linear-gradient(180deg,#F5FFFD,#fff)}
+  .op-head{display:flex;align-items:center;gap:9px;margin-bottom:10px}
+  .op-head h3{font-size:13.5px;font-weight:600;color:var(--navy)}
+  .op-head .sub{font-size:11.5px;color:var(--muted)}
+  .op-tools{display:flex;flex-wrap:wrap;gap:10px;align-items:center;font-size:12.5px;color:var(--ink)}
+  .op-tools .grp{display:flex;align-items:center;gap:6px;background:#fff;border:1px solid var(--line);border-radius:9px;padding:6px 10px}
+  .op-tools input{font-family:'Inter';font-size:12.5px;padding:5px 7px;border:1px solid var(--line);border-radius:7px;width:58px;text-align:center}
+  .op-table{width:100%;border-collapse:collapse;margin-top:12px;font-size:12px;background:#fff}
+  .op-table th{background:#F1F5F9;font-size:10px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:600;padding:6px 8px;text-align:left;border:1px solid var(--line)}
+  .op-table td{border:1px solid var(--line);padding:5px 8px;vertical-align:middle}
+  .op-table td.opn{font-family:'Poppins';font-weight:600;color:var(--blue);width:80px}
+  .ocean-mode .op-table td.opn{color:var(--teal)}
+  .op-table input.op-in{font-family:'Inter';font-size:12px;padding:5px 7px;border:1px solid var(--line);border-radius:7px;width:100%}
+  .op-warn{font-size:10.5px;color:#B45309;font-weight:600;margin-left:6px}
+  .op-note{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.5}
+  .op-empty{font-size:12px;color:var(--muted);padding:8px 0}
+  .dgd-table tr.op-line td,.imdg-table tr.op-line td{background:#EFEFEF;font-weight:700;font-size:9px;letter-spacing:.4px;text-align:left}
+  .form-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}.form-grid .field.full{grid-column:span 2}
+  .form-grid .field.air-only{display:flex}.form-grid .field.ocean-only2{display:none}
+  .ocean-mode .form-grid .field.air-only{display:none}.ocean-mode .form-grid .field.ocean-only2{display:flex}
+  .radio-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:2px}
+  .radio-row label{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:400;text-transform:none;letter-spacing:0;cursor:pointer}
+  #previewWrap{overflow-x:auto;padding-bottom:6px}
+  .dgd{width:840px;margin:0 auto;background:#fff;color:#111;font-family:'Inter',Arial,sans-serif;font-size:11px;line-height:1.3;border:2px solid #111;position:relative;padding:0 26px}
+  .dgd .stripe{position:absolute;top:0;bottom:0;width:20px;background:repeating-linear-gradient(-45deg,#c81919 0 8px,#fff 8px 16px)}
+  .dgd .stripe.l{left:0}.dgd .stripe.r{right:0}.dgd .inner{padding:12px 4px}
+  .dgd h3{font-family:'Poppins';font-size:13.5px;text-align:center;font-weight:600;margin:4px 0 2px}
+  .dgd .iata-sub{text-align:center;font-size:9px;color:#b91c1c;margin-bottom:9px;font-weight:500}
+  .drow{display:flex;border:1px solid #111;border-bottom:none}.drow:last-of-type{border-bottom:1px solid #111}
+  .dcell{padding:5px 7px;border-right:1px solid #111;flex:1}.dcell:last-child{border-right:none}
+  .dcell .lab,.lab{font-size:8px;text-transform:uppercase;color:#555;letter-spacing:.3px;margin-bottom:2px}
+  .dcell .val{font-size:10.5px;min-height:13px;font-weight:500;white-space:pre-line}
+  .dgd-table{width:100%;border-collapse:collapse;border:1px solid #111}
+  .dgd-table th,.dgd-table td{border:1px solid #111;padding:4px 5px;font-size:9.5px;vertical-align:top}
+  .dgd-table th{background:#f0f0f0;font-size:8px;text-transform:uppercase;font-weight:600;text-align:center}
+  .dgd-table td .big{font-size:11px;font-weight:600}
+  .sig-row{display:flex;border:1px solid #111;border-top:none}.sig-row .sc{flex:1;padding:6px 7px;border-right:1px solid #111}.sig-row .sc:last-child{border-right:none}
+  .warn-box{border:1px solid #111;border-top:none;padding:5px 8px;font-size:9px;color:#333}
+  .imdg{width:840px;margin:0 auto;background:#fff;color:#111;font-family:'Inter',Arial,sans-serif;font-size:10.5px;border:2px solid #111}
+  .imdg h3{font-size:13px;font-weight:600;text-align:center;padding:8px;border-bottom:2px solid #111}
+  .imdg .msub{text-align:center;font-size:9px;color:#0D9488;font-weight:500;padding:4px;border-bottom:1px solid #111}
+  .igrid{display:flex}.icol{flex:1;border-right:1px solid #111}.icol:last-child{border-right:none}
+  .ibox{border-bottom:1px solid #111;padding:5px 7px}.ibox:last-child{border-bottom:none}
+  .ibox .val{font-size:10.5px;min-height:13px;font-weight:500;white-space:pre-line}
+  .imdg-table{width:100%;border-collapse:collapse;border-top:1px solid #111}
+  .imdg-table th,.imdg-table td{border:1px solid #111;padding:4px 5px;font-size:9px;vertical-align:top}
+  .imdg-table th{background:#f0f0f0;font-size:7.5px;text-transform:uppercase;font-weight:600;text-align:center}
+  .cert-row{display:flex;border-top:1px solid #111}.cert-row .cc{flex:1;padding:6px 8px;border-right:1px solid #111;font-size:9px}.cert-row .cc:last-child{border-right:none}
+  .mp-badge{display:inline-block;background:#000;color:#fff;font-size:8px;padding:1px 5px;border-radius:3px;font-weight:600}
+  /* login overlay */
+  #login{position:fixed;inset:0;background:rgba(15,23,42,.6);display:none;place-items:center;z-index:100}
+  #login.show{display:grid}
+  .login-card{background:#fff;border-radius:16px;padding:28px;width:340px;box-shadow:var(--shadow)}
+  .login-card h2{font-size:18px;color:var(--navy);margin-bottom:4px}
+  .login-card p{font-size:12.5px;color:var(--muted);margin-bottom:16px}
+  .login-card input{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:9px;font-size:14px;margin-bottom:10px}
+  .login-card .btn{width:100%;justify-content:center}
+  @media print{body{background:#fff}header.topbar,.wrap>*:not(#step-preview),.banner,.master,.step-head,.btn-row,.no-print{display:none !important}
+    #step-preview{border:none;box-shadow:none;margin:0}.step-body{padding:0}.dgd,.imdg{width:100%}}
+  @media(max-width:760px){.three-up,.grid,.form-grid{grid-template-columns:1fr !important}.field.wide,.form-grid .field.full{grid-column:span 1}.wrap{padding:16px 12px 60px}.mode-toggle{width:100%;margin-left:0}.mode-toggle button{flex:1;justify-content:center}}
+</style>
+</head>
+<body class="air-mode">
+
+<header class="topbar">
+  <div class="logo"><span class="chev">›</span> DGIFY <span class="sub" id="modeName">DGD Generator · SDS → IATA</span></div>
+  <div class="mode-toggle">
+    <button id="mAir" class="active" onclick="setMode('air')">✈ Air (IATA)</button>
+    <button id="mOcean" class="ocean" onclick="setMode('ocean')">🚢 Ocean (IMDG)</button>
+  </div>
+  <div class="whoami" id="whoami"></div>
+</header>
+
+<div class="wrap">
+  <div class="banner amber"><span>⚠️</span><div><b>Draft only.</b> AI-extracted data may contain errors. A certified IATA DGR / DGSA must review and sign before any real use.</div></div>
+  <div class="banner blue" id="modeBanner"><span>ℹ️</span><div id="modeMsg"></div></div>
+
+  <!-- MASTER -->
+  <div class="master" id="master">
+    <div class="master-head" onclick="document.getElementById('master').classList.toggle('open')">
+      <div class="ic">📚</div><h2>DG Master Library</h2><span class="count" id="masterCount">0 products</span><span class="caret">▾</span>
+    </div>
+    <div class="master-body" id="masterBody"></div>
+  </div>
+
+  <!-- STEP 1 -->
+  <section class="step">
+    <div class="step-head"><div class="step-num">1</div><h2>Attach Documents</h2><div class="hint">SDS = substance · Packing List = quantity · Booking = flight/vessel</div></div>
+    <div class="step-body">
+      <div class="three-up">
+        <div class="drop" id="dropSDS"><div class="tag">Required</div><div class="ic">📕</div><div class="big">SDS / MSDS</div><div class="small">Section 14 · multiple files</div><input type="file" id="inputSDS" accept="application/pdf" multiple hidden></div>
+        <div class="drop" id="dropPL"><div class="tag opt">Optional</div><div class="ic">📋</div><div class="big">Packing List</div><div class="small">packages · weight</div><input type="file" id="inputPL" accept="application/pdf" multiple hidden></div>
+        <div class="drop" id="dropBK"><div class="tag opt">Optional</div><div class="ic">🎫</div><div class="big">Booking Confirmation</div><div class="small">flight/voyage · container</div><input type="file" id="inputBK" accept="application/pdf" multiple hidden></div>
+      </div>
+      <div class="filelist" id="fileList"></div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="extractBtn" disabled><span id="extractLabel">✨ Extract with AI</span></button>
+        <button class="btn btn-ghost btn-sm" onclick="loadSample()">👁 Load sample (demo)</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 2 -->
+  <section class="step hidden" id="step-review">
+    <div class="step-head"><div class="step-num">2</div><h2>Review Dangerous Goods</h2><div class="hint">yellow = AI not confident</div></div>
+    <div class="step-body">
+      <div class="op-panel hidden" id="opPanel">
+        <div class="op-head"><span>📦</span><h3>Overpack grouping</h3><span class="sub">รวมหลายรายการเข้าพาเลท / กล่องรวม — จะขึ้นบรรทัด “OVERPACK USED #n / TOTAL NET QUANTITY” ในเอกสาร</span></div>
+        <div class="op-tools">
+          <span class="grp">จำนวน overpack <input type="number" id="opCount" min="0" max="99" value="0"></span>
+          <button class="btn btn-ghost btn-sm" id="opAuto">⇄ แบ่งเท่า ๆ กัน</button>
+          <span class="grp">รายการที่ <input type="number" id="opFrom" min="1" placeholder="1"> – <input type="number" id="opTo" min="1" placeholder="40"> → # <input type="number" id="opNo" min="1" placeholder="1"> <button class="btn btn-ghost btn-sm" id="opApply">กำหนด</button></span>
+          <button class="btn btn-ghost btn-sm" id="opClear">ล้างการจัดกลุ่ม</button>
+        </div>
+        <div id="opSummary"></div>
+      </div>
+      <div id="dgCards"></div>
+      <div class="btn-row"><button class="btn btn-ghost btn-sm" id="addItemBtn">+ Add item manually</button></div>
+    </div>
+  </section>
+
+  <!-- STEP 3 -->
+  <section class="step hidden" id="step-shipment">
+    <div class="step-head"><div class="step-num">3</div><h2>Shipment Details <span id="modeLabel" style="font-weight:400;color:var(--muted);font-size:13px">— Air</span></h2></div>
+    <div class="step-body">
+      <div class="form-grid">
+        <div class="field full"><label>Shipper <span style="font-weight:400;text-transform:none;color:var(--blue)">· pick from customers</span></label><input id="f_shipper" list="customerList" placeholder="Shipper name + address" onchange="pickCustomer('f_shipper')"></div>
+        <div class="field full"><label>Consignee</label><input id="f_consignee" list="customerList" placeholder="Consignee name + address" onchange="pickCustomer('f_consignee')"></div>
+        <datalist id="customerList"></datalist>
+        <div class="field air-only"><label>Air Waybill No.</label><input id="f_awb" placeholder="618-12345675"></div>
+        <div class="field air-only"><label>Flight No.</label><input id="f_flight" placeholder="TG403"></div>
+        <div class="field air-only"><label>Airport of Departure</label><input id="f_dep" placeholder="Bangkok (BKK)"></div>
+        <div class="field air-only"><label>Airport of Destination</label><input id="f_dest" placeholder="Singapore (SIN)"></div>
+        <div class="field air-only full"><label>Aircraft limitation</label><div class="radio-row"><label><input type="radio" name="aircraft" value="PAX" checked> Passenger and Cargo</label><label><input type="radio" name="aircraft" value="CAO"> Cargo Aircraft Only</label></div></div>
+        <div class="field ocean-only2"><label>Booking / B/L No.</label><input id="f_bl" placeholder="MAEU298374651"></div>
+        <div class="field ocean-only2"><label>Voyage No.</label><input id="f_voyage" placeholder="042W"></div>
+        <div class="field ocean-only2"><label>Vessel</label><input id="f_vessel" placeholder="Maersk Sentosa"></div>
+        <div class="field ocean-only2"><label>Carrier</label><input id="f_carrier" placeholder="Maersk"></div>
+        <div class="field ocean-only2"><label>Port of Loading</label><input id="f_pol" placeholder="Laem Chabang (THLCH)"></div>
+        <div class="field ocean-only2"><label>Port of Discharge</label><input id="f_pod" placeholder="Singapore (SGSIN)"></div>
+        <div class="field ocean-only2"><label>Container No.</label><input id="f_container" placeholder="MSKU1234567"></div>
+        <div class="field ocean-only2"><label>Seal No.</label><input id="f_seal" placeholder="SEAL0099821"></div>
+        <div class="field ocean-only2"><label>Packing Certified By</label><input id="f_packer" placeholder="Container packer"></div>
+        <div class="field full"><label>Name / Title of Signatory</label><input id="f_sign" placeholder="Signatory (must hold DGR certificate)"></div>
+        <div class="field"><label>Reference No.</label><input id="f_ref" placeholder="DGCS.0275"></div>
+        <div class="field"><label>Place / Date</label><input id="f_place" placeholder="Bangkok, 27 Jul 2026"></div>
+        <div class="field"><label>Emergency Contact (24h)</label><input id="f_emg" placeholder="+66 ..."></div>
+      </div>
+      <div class="btn-row"><button class="btn btn-dark" id="genBtn">Generate draft →</button></div>
+    </div>
+  </section>
+
+  <!-- STEP 4 -->
+  <section class="step hidden" id="step-preview">
+    <div class="step-head no-print"><div class="step-num">4</div><h2>Draft Declaration</h2><div class="hint">print / save PDF · export Excel</div></div>
+    <div class="step-body">
+      <div id="previewWrap"></div>
+      <div class="btn-row no-print">
+        <button class="btn btn-primary" onclick="window.print()">🖨️ Print / Save PDF</button>
+        <button class="btn btn-ghost" onclick="document.getElementById('tplInput').click()">📄 Fill official airline PDF</button>
+        <input type="file" id="tplInput" accept="application/pdf" hidden>
+        <button class="btn btn-ghost" onclick="exportExcel()">📊 Export Excel</button>
+        <button class="btn btn-ghost" id="saveDbBtn" onclick="saveDeclaration()">💾 Save to system</button>
+        <button class="btn btn-ghost" onclick="document.getElementById('step-review').scrollIntoView({behavior:'smooth'})">← Edit</button>
+      </div>
+      <div style="font-size:11.5px;color:var(--muted);margin-top:8px" class="no-print">📄 = อัปโหลด <b>ฟอร์มเปล่า</b>ของสายการบิน (F-FU062) แล้วโปรแกรมวางข้อมูลลงพิกัดจริง — ได้ PDF ทางการหลายหน้าอัตโนมัติ</div>
+    </div>
+  </section>
+</div>
+
+<!-- login overlay -->
+<div id="login"><div class="login-card">
+  <h2>Sign in</h2><p>DGIFY — single company, shared data</p>
+  <input id="li_email" type="email" placeholder="Email">
+  <input id="li_pass" type="password" placeholder="Password">
+  <button class="btn btn-primary" onclick="doLogin()">Sign in</button>
+  <p style="margin-top:10px;text-align:center"><a onclick="doSignup()" style="cursor:pointer;color:var(--blue)">Sign up</a></p>
+</div></div>
+
+<script type="module">
+// ============================ CONFIG ============================
+// Fill from your project. If left blank = demo mode (runs in-page, no backend).
+const CONFIG = {
+  SUPABASE_URL:  "https://ptgyxdtpjvjzrwgqzekh.supabase.co",
+  SUPABASE_ANON: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB0Z3l4ZHRwanZqenJ3Z3F6ZWtoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQzNDEzMDQsImV4cCI6MjA5OTkxNzMwNH0.9BYxL2LqEuHKVyMKRnauRTrch5rysHeFrVGkD6JlCeY",
+  DG_API:        "https://ptgyxdtpjvjzrwgqzekh.supabase.co/functions/v1/dg-api",
+  R2_BUCKET:     "thearavichdocs",
+};
+const LIVE = !!(CONFIG.SUPABASE_URL && CONFIG.SUPABASE_ANON);
+
+let supa = null, session = null;
+if (LIVE) {
+  const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
+  supa = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON);
+}
+
+const state = { mode:'air', sds:[], pl:[], bk:[], items:[], master:[], me:null, customers:[],
+                overpackCount:0, overpackMeta:{} };
+window.state = state;
+
+// ============================ AUTH ============================
+async function refreshSession(){
+  if (!LIVE){ document.getElementById('whoami').innerHTML = '<span>demo mode</span>'; return; }
+  const { data } = await supa.auth.getSession();
+  session = data.session;
+  if (!session){ document.getElementById('login').classList.add('show'); return; }
+  document.getElementById('login').classList.remove('show');
+  // identity from your existing app_users table (level = role for sign-off gate)
+  const { data:me } = await supa.from('app_users')
+    .select('first_name,last_name,level,email').eq('auth_id', session.user.id).maybeSingle();
+  state.me = me;
+  const who = me ? `${me.first_name} ${me.last_name||''} · ${me.level||'Staff'}` : session.user.email;
+  document.getElementById('whoami').innerHTML = `<span>${who}</span> · <a onclick="logout()">Sign out</a>`;
+  await loadMaster();
+  await loadCustomers();
+}
+
+// pull existing CRM customers to autofill shipper / consignee
+async function loadCustomers(){
+  if (!LIVE) return;
+  const { data } = await supa.from('customers').select('company_name,address,tax_id').order('company_name');
+  state.customers = data || [];
+  const dl = document.getElementById('customerList');
+  if (dl) dl.innerHTML = state.customers.map(c=>`<option value="${(c.company_name||'').replace(/"/g,'&quot;')}">`).join('');
+}
+// when a customer name is chosen, expand to "name + address"
+window.pickCustomer = (id) => {
+  const el = document.getElementById(id);
+  const c = state.customers.find(x => x.company_name === el.value.trim());
+  if (c) el.value = c.company_name + (c.address ? '\n'+c.address : '');
+};
+window.doLogin = async () => {
+  const email = li_email.value, password = li_pass.value;
+  const { error } = await supa.auth.signInWithPassword({ email, password });
+  if (error) return alert(error.message);
+  refreshSession();
+};
+window.doSignup = async () => {
+  const email = li_email.value, password = li_pass.value;
+  const { error } = await supa.auth.signUp({ email, password });
+  if (error) return alert(error.message);
+  alert('Signed up. Check your email to confirm (if enabled), then sign in.');
+};
+window.logout = async () => { await supa.auth.signOut(); location.reload(); };
+
+// ============================ MODE ============================
+window.setMode = (m) => {
+  state.mode = m; document.body.className = m+'-mode';
+  mAir.classList.toggle('active', m==='air'); mOcean.classList.toggle('active', m==='ocean');
+  modeLabel.textContent = m==='air'?'— Air':'— Ocean';
+  modeName.textContent = m==='air'?'DGD Generator · SDS → IATA':'DGD Generator · SDS → IMDG';
+  modeMsg.textContent = m==='air'
+    ? 'Air mode: IATA Shipper\u2019s Declaration (red border) — choose an airline template when exporting the official form'
+    : 'Ocean mode: IMDG Multimodal Dangerous Goods Form — includes container/seal + packing certificate';
+  if (state.items.length) renderCards();
+};
+
+// ============================ MASTER ============================
+async function loadMaster(){
+  if (LIVE){
+    const { data } = await supa.from('dg_master').select('*').order('product_name');
+    state.master = data || [];
+  } else if (!state.master.length){
+    state.master = [
+      {product_name:'Xylene, technical', un_number:'UN1307', proper_shipping_name:'XYLENES', class_division:'3', packing_group:'III', ems:'F-E, S-D', packing_instruction:'355'},
+      {product_name:'Hydrochloric acid 32%', un_number:'UN1789', proper_shipping_name:'HYDROCHLORIC ACID', class_division:'8', packing_group:'II', ems:'F-A, S-B', packing_instruction:'851'},
+    ];
+  }
+  renderMaster();
+}
+function renderMaster(){
+  masterCount.textContent = state.master.length + ' products' + (LIVE?'':' (demo)');
+  masterBody.innerHTML = state.master.map((p,i)=>`<div class="chip"><span class="un">${p.un_number||'—'}</span><span>${p.product_name}</span><span class="cls">${p.class_division||'?'}</span><button onclick="addFromMaster(${i})">+</button></div>`).join('');
+}
+window.addFromMaster = (i) => { state.items.push({...state.master[i], confidence:{}, _matched:false}); showReview(); renderCards(); document.getElementById('step-review').scrollIntoView({behavior:'smooth'}); };
+
+// ============================ UPLOAD ============================
+function wireDrop(dropId, inputId, bucket){
+  const drop = document.getElementById(dropId), input = document.getElementById(inputId);
+  drop.onclick = () => input.click();
+  drop.ondragover = e => { e.preventDefault(); drop.classList.add('drag'); };
+  drop.ondragleave = () => drop.classList.remove('drag');
+  drop.ondrop = e => { e.preventDefault(); drop.classList.remove('drag'); add(e.dataTransfer.files); };
+  input.onchange = e => add(e.target.files);
+  function add(fl){ for(const f of fl) if(f.type==='application/pdf') state[bucket].push({file:f,kind:bucket,uploaded:false}); renderFiles(); }
+}
+wireDrop('dropSDS','inputSDS','sds'); wireDrop('dropPL','inputPL','pl'); wireDrop('dropBK','inputBK','bk');
+function renderFiles(){
+  const labels={sds:'SDS',pl:'Packing List',bk:'Booking'};
+  const all=[...state.sds,...state.pl,...state.bk];
+  fileList.innerHTML = all.map(x=>`<div class="fileitem"><span>${x.kind==='sds'?'📕':x.kind==='pl'?'📋':'🎫'}</span><span class="nm">${x.file.name}</span><span class="sz">${labels[x.kind]} · ${(x.file.size/1024).toFixed(0)} KB</span>${x.uploaded?'<span class="up">✓ R2</span>':''}<button class="rm" data-k="${x.kind}" data-n="${x.file.name}">×</button></div>`).join('');
+  fileList.querySelectorAll('.rm').forEach(b=>b.onclick=()=>{state[b.dataset.k]=state[b.dataset.k].filter(x=>x.file.name!==b.dataset.n);renderFiles();});
+  extractBtn.disabled = state.sds.length===0;
+}
+window.renderFiles = renderFiles;
+
+// upload one file to R2 via presigned url from dg-api
+async function uploadToR2(entry){
+  if (!LIVE) return null;
+  const key = `dgd/${entry.kind}/${Date.now()}_${entry.file.name}`;
+  const res = await callApi({ action:'presign', key, content_type:'application/pdf' });
+  await fetch(res.upload_url, { method:'PUT', headers:{'content-type':'application/pdf'}, body: entry.file });
+  await supa.from('dgd_source_documents').insert({ kind:entry.kind, file_name:entry.file.name, r2_key:key });
+  entry.uploaded = true; entry.r2_key = key;
+  return key;
+}
+async function callApi(body){
+  const r = await fetch(CONFIG.DG_API, {
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':`Bearer ${session?.access_token || CONFIG.SUPABASE_ANON}`},
+    body: JSON.stringify(body)
+  });
+  return r.json();
+}
+function fileToB64(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.onerror=()=>rej(new Error('read'));r.readAsDataURL(file);});}
+
+// ============================ EXTRACT ============================
+extractBtn.onclick = async () => {
+  extractBtn.disabled = true; extractLabel.innerHTML = '<span class="spinner"></span> Reading...';
+  try{
+    if (!LIVE){ alert('Demo mode is not connected to AI — use "Load sample" instead'); loadSample(); return; }
+    // upload originals to R2 in the background
+    const all=[...state.sds,...state.pl,...state.bk];
+    for (const e of all){ if(!e.uploaded) await uploadToR2(e); }
+    renderFiles();
+    // send to Claude via dg-api
+    const documents=[];
+    for (const e of all){ documents.push({ media_type:'application/pdf', data: await fileToB64(e.file) }); }
+    const out = await callApi({ action:'extract', documents });
+    if (out.error){ alert('Extraction failed: '+out.error); return; }
+    state.items = (out.products||[]).map(p=>({...p,confidence:p.confidence||{},_matched:!!p.matched}));
+    if (out.booking) applyBooking(out.booking);
+    showReview(); renderCards();
+    document.getElementById('step-review').scrollIntoView({behavior:'smooth'});
+  } catch(err){ alert('Error: '+err.message); }
+  finally{ extractBtn.disabled=false; extractLabel.textContent='✨ Extract with AI'; }
+};
+function applyBooking(b){
+  const set=(id,v)=>{const el=document.getElementById(id); if(el&&v) el.value=v;};
+  set('f_awb',b.booking_no); set('f_bl',b.booking_no); set('f_flight',b.flight_or_voyage);
+  set('f_voyage',b.flight_or_voyage); set('f_vessel',b.vessel_name);
+  set('f_dep',b.origin); set('f_pol',b.origin); set('f_dest',b.destination); set('f_pod',b.destination);
+  set('f_container',b.container_no); set('f_seal',b.seal_no);
+}
+
+window.loadSample = () => {
+  state.items = [
+    {product_name:'Adriana Madam', un_number:'UN3082', proper_shipping_name:'ENVIRONMENTALLY HAZARDOUS SUBSTANCE, LIQUID, N.O.S. (1-(1,2,3,4,5,6,7,8-octahydro-2,3,8,8-tetramethyl-2-naphthalenyl)ethanone)', class_division:'9', packing_group:'III', marine_pollutant:true, ems:'F-A, S-F', packing_instruction:'964', pkg_count:'14', pkg_type:'STEEL DRUMS', net_qty:'20', net_unit:'L', gross_kg:'296', _matched:true, confidence:{un_number:'high',proper_shipping_name:'high',class_division:'high',packing_group:'high'}},
+    {product_name:'Journey Intense', un_number:'UN3082', proper_shipping_name:'ENVIRONMENTALLY HAZARDOUS SUBSTANCE, LIQUID, N.O.S. (alpha-hexylcinnamaldehyde)', class_division:'9', packing_group:'III', marine_pollutant:true, ems:'F-A, S-F', packing_instruction:'964', pkg_count:'6', pkg_type:'STEEL DRUMS', net_qty:'20', net_unit:'L', gross_kg:'128', _matched:true, confidence:{un_number:'high',proper_shipping_name:'high',class_division:'high',packing_group:'low'}},
+  ];
+  const s=(id,v)=>{document.getElementById(id).value=v;};
+  s('f_shipper','DG PACKAGING (THAILAND) CO.,LTD.\nBangplee, Samutprakarn 10540 Thailand');
+  s('f_consignee','Guangzhou Weishibo Logistics Supply Chain Co., Ltd.\nGuangzhou, China');
+  s('f_awb','297-7280 7055'); s('f_flight','CI862'); s('f_dep','Suvarnabhumi (BKK)'); s('f_dest','Guangzhou (CAN)');
+  s('f_bl','MAEU298374651'); s('f_voyage','042W'); s('f_vessel','Maersk Sentosa'); s('f_carrier','Maersk');
+  s('f_pol','Laem Chabang (THLCH)'); s('f_pod','Guangzhou (CNGZG)'); s('f_container','MSKU1234567'); s('f_seal','SEAL0099821'); s('f_packer','S. Prapailuk');
+  s('f_sign','Mr. Yosnawas Boonsiriphan / DG Officer'); s('f_ref','DGCS.0275'); s('f_place','Bangkok, 17 Jul 2026'); s('f_emg','+66 99 624 5529');
+  showReview(); renderCards(); document.getElementById('step-review').scrollIntoView({behavior:'smooth'});
+};
+function showReview(){ document.getElementById('step-review').classList.remove('hidden'); document.getElementById('step-shipment').classList.remove('hidden'); }
+
+// test helper for the 80-item / 2-pallet case — run loadBulkSample(80) in the browser console
+window.loadBulkSample = (n=80) => {
+  loadSample();
+  const base=state.items[0];
+  state.items=[]; for(let i=1;i<=n;i++) state.items.push({...base, product_name:'Fragrance Sample '+i,
+    pkg_count:String(1+(i%4)), net_qty:'20', net_unit:'L', gross_kg:String(20+(i%4)*20), overpack:null, confidence:{}});
+  state.overpackCount=2; state.overpackMeta={};
+  renderCards();
+};
+
+// ============================ OVERPACK ============================
+// overpack number lives on each item as it.overpack (1..n) | null
+const opOf = it => { const n = parseInt(it && it.overpack); return Number.isFinite(n) && n > 0 ? n : null; };
+function opUsed(){ const s=new Set(); state.items.forEach(it=>{const n=opOf(it); if(n) s.add(n);}); return [...s].sort((a,b)=>a-b); }
+function opMax(){ return Math.max(state.overpackCount||0, 0, ...opUsed()); }
+const numFmt = v => (Math.round(v*1000)/1000).toString();
+
+// totals for one overpack: net = pkg_count × net_qty (net_qty = per package), grouped by unit
+function opTotals(n){
+  const items = state.items.filter(it => !it.not_regulated && opOf(it)===n);
+  const byUnit={}; let gross=0, pkgs=0;
+  items.forEach(it=>{
+    const q=parseFloat(it.net_qty)||0, c=parseInt(it.pkg_count)||0, u=((it.net_unit||'L')+'').trim()||'L';
+    if(q) byUnit[u]=(byUnit[u]||0)+q*(c||1);
+    gross += parseFloat(it.gross_kg)||0; pkgs += c;
+  });
+  return { byUnit, gross, pkgs, n_items:items.length, mixed:Object.keys(byUnit).length>1 };
+}
+function opAutoQty(n){ const e=Object.entries(opTotals(n).byUnit); return e.length? e.map(([u,v])=>numFmt(v)+' '+u).join(' + ') : ''; }
+function opQtyText(n){ return (((state.overpackMeta[n]||{}).total_net_quantity||'')+'').trim() || opAutoQty(n); }
+function opLineText(n){
+  const m=state.overpackMeta[n]||{}, q=opQtyText(n);
+  return `OVERPACK USED #${n}${m.note?' ('+m.note+')':''}` + (q?`   /   TOTAL NET QUANTITY ${q}`:'');
+}
+// ordered render rows: each overpack's items together, followed by its OVERPACK USED line; loose items last
+function buildRows(items){
+  const g=new Map(), loose=[];
+  items.forEach(it=>{ const n=opOf(it); if(n){ if(!g.has(n)) g.set(n,[]); g.get(n).push(it); } else loose.push(it); });
+  const rows=[];
+  [...g.keys()].sort((a,b)=>a-b).forEach(n=>{
+    g.get(n).forEach(it=>rows.push({kind:'item', it, op:n}));
+    rows.push({kind:'op', n, text:opLineText(n)});
+  });
+  loose.forEach(it=>rows.push({kind:'item', it, op:null}));
+  return rows;
+}
+function opOptions(it){
+  const cur=opOf(it), max=opMax(); let h='<option value="">—</option>';
+  for(let i=1;i<=max;i++) h += `<option value="${i}" ${cur===i?'selected':''}>#${i}</option>`;
+  h += '<option value="new">+ ใหม่</option>';
+  return h;
+}
+function renderOverpackPanel(){
+  const panel=document.getElementById('opPanel'); if(!panel) return;
+  panel.classList.toggle('hidden', state.items.length===0);
+  const max=opMax(); document.getElementById('opCount').value = max;
+  const loose = state.items.filter(it=>!it.not_regulated && !opOf(it)).length;
+  let html;
+  if(!max){
+    html = '<div class="op-empty">ยังไม่ได้จัด overpack — ทุกรายการจะแสดงเป็นหีบห่อเดี่ยว</div>';
+  } else {
+    let body='';
+    for(let n=1;n<=max;n++){
+      const t=opTotals(n), m=state.overpackMeta[n]||{};
+      body += `<tr><td class="opn">#${n}</td><td>${t.n_items}</td><td>${t.pkgs||''}</td>
+        <td><input class="op-in" data-op="${n}" data-f="total_net_quantity" value="${((m.total_net_quantity||'')+'').replace(/"/g,'&quot;')}" placeholder="${opAutoQty(n)||'—'}">${t.mixed?'<span class="op-warn">⚠ หน่วยผสม</span>':''}</td>
+        <td>${t.gross?numFmt(t.gross):''}</td>
+        <td><input class="op-in" data-op="${n}" data-f="note" value="${((m.note||'')+'').replace(/"/g,'&quot;')}" placeholder="เช่น PALLET"></td></tr>`;
+    }
+    html = `<table class="op-table"><thead><tr><th>Overpack</th><th>รายการ</th><th>หีบห่อ</th><th>Total net qty</th><th>Gross kg</th><th>หมายเหตุ / ประเภท</th></tr></thead><tbody>${body}</tbody></table>
+      <div class="op-note">ค่าอัตโนมัติ = จำนวนหีบห่อ × net qty ต่อหีบห่อ (พิมพ์ทับได้ในช่อง Total net qty) · ยังไม่จัดกลุ่ม <b>${loose}</b> รายการ</div>`;
+  }
+  document.getElementById('opSummary').innerHTML = html;
+  panel.querySelectorAll('.op-in').forEach(el=>el.oninput=()=>{
+    const n=+el.dataset.op; state.overpackMeta[n]=state.overpackMeta[n]||{};
+    state.overpackMeta[n][el.dataset.f]=el.value;
+  });
+}
+// panel controls
+document.getElementById('opCount').onchange = e => {
+  const v=Math.max(0, Math.min(99, parseInt(e.target.value)||0));
+  state.overpackCount=v;
+  state.items.forEach(it=>{ if(opOf(it)>v) it.overpack=null; });
+  Object.keys(state.overpackMeta).forEach(k=>{ if(+k>v) delete state.overpackMeta[k]; });
+  renderCards();
+};
+document.getElementById('opAuto').onclick = () => {
+  const v=opMax();
+  if(v<1) return alert('ใส่จำนวน overpack ก่อน (เช่น 2 พาเลท)');
+  const idx=state.items.map((it,i)=>i).filter(i=>!state.items[i].not_regulated);
+  if(!idx.length) return;
+  const per=Math.ceil(idx.length/v);
+  idx.forEach((i,k)=>{ state.items[i].overpack = Math.min(v, Math.floor(k/per)+1); });
+  renderCards();
+};
+document.getElementById('opApply').onclick = () => {
+  const from=parseInt(opFrom.value), to=parseInt(opTo.value), n=parseInt(opNo.value);
+  if(!Number.isFinite(from)||!Number.isFinite(to)||!Number.isFinite(n)||n<1) return alert('กรอกช่วงรายการ และเลข overpack ให้ครบ');
+  const a=Math.max(1,Math.min(from,to)), b=Math.min(state.items.length,Math.max(from,to));
+  for(let i=a;i<=b;i++) state.items[i-1].overpack=n;
+  state.overpackCount=Math.max(state.overpackCount||0,n);
+  renderCards();
+};
+document.getElementById('opClear').onclick = () => {
+  state.items.forEach(it=>it.overpack=null);
+  state.overpackCount=0; state.overpackMeta={};
+  renderCards();
+};
+
+// ============================ CARDS ============================
+const PG=['','I','II','III'], CLS=['','1','2.1','2.2','2.3','3','4.1','4.2','4.3','5.1','5.2','6.1','6.2','7','8','9'];
+const UNITS=['L','kg','mL','g'];
+function renderCards(){
+  const wrap=dgCards; wrap.innerHTML='';
+  state.items.forEach((it,idx)=>{
+    const c=it.confidence||{},low=k=>c[k]==='low'?'low':'',flag=k=>c[k]==='low'?'<span class="flag">⚠</span>':'';
+    const card=document.createElement('div'); card.className='dg-card';
+    card.innerHTML=`<div class="dg-card-head"><span style="font-family:'Poppins';font-weight:600;font-size:12px;color:var(--muted);min-width:26px">${idx+1}.</span><span class="pname">${it.product_name||'Item #'+(idx+1)}</span>${opOf(it)?`<span class="matchtag" style="background:#EEF2FF;color:#3730A3">📦 OP #${opOf(it)}</span>`:''}${it.not_regulated?'<span class="matchtag ok">Not Regulated</span>':(it._matched?'<span class="matchtag ok">✓ matched</span>':'<span class="matchtag warn">not matched</span>')}<button class="card-remove" data-i="${idx}">×</button></div>
+      <div class="grid">
+        <div class="field ${low('un_number')}"><label>UN No. ${flag('un_number')}</label><input data-i="${idx}" data-k="un_number" value="${it.un_number||''}"></div>
+        <div class="field wide ${low('proper_shipping_name')}"><label>Proper Shipping Name ${flag('proper_shipping_name')}</label><input data-i="${idx}" data-k="proper_shipping_name" value="${(it.proper_shipping_name||'').replace(/"/g,'&quot;')}"></div>
+        <div class="field ${low('class_division')}"><label>Class ${flag('class_division')}</label><select data-i="${idx}" data-k="class_division">${CLS.map(o=>`<option ${o===it.class_division?'selected':''}>${o}</option>`).join('')}</select></div>
+        <div class="field ${low('packing_group')}"><label>PG ${flag('packing_group')}</label><select data-i="${idx}" data-k="packing_group">${PG.map(o=>`<option ${o===it.packing_group?'selected':''}>${o}</option>`).join('')}</select></div>
+        <div class="field"><label>Flashpoint °C</label><input data-i="${idx}" data-k="flashpoint_c" value="${it.flashpoint_c||''}"></div>
+        <div class="field ocean-only"><label>EmS</label><input data-i="${idx}" data-k="ems" value="${it.ems||''}"></div>
+        <div class="field ocean-only"><label>Marine Pollutant</label><select data-i="${idx}" data-k="marine_pollutant"><option value="false" ${!it.marine_pollutant?'selected':''}>No</option><option value="true" ${it.marine_pollutant?'selected':''}>Yes</option></select></div>
+        <div class="field"><label>No. packages</label><input data-i="${idx}" data-k="pkg_count" value="${it.pkg_count||''}"></div>
+        <div class="field wide"><label>Type of packaging</label><input data-i="${idx}" data-k="pkg_type" value="${(it.pkg_type||'').replace(/"/g,'&quot;')}"></div>
+        <div class="field"><label>Net qty <span style="font-weight:400;text-transform:none">/ หีบห่อ</span></label><input data-i="${idx}" data-k="net_qty" value="${it.net_qty||''}"></div>
+        <div class="field"><label>Unit</label><select data-i="${idx}" data-k="net_unit">${UNITS.map(u=>`<option ${u===(it.net_unit||'L')?'selected':''}>${u}</option>`).join('')}</select></div>
+        <div class="field ocean-only"><label>Gross kg</label><input data-i="${idx}" data-k="gross_kg" value="${it.gross_kg||''}"></div>
+        <div class="field"><label>Packing Inst.</label><input data-i="${idx}" data-k="packing_instruction" value="${it.packing_instruction||''}"></div>
+        <div class="field"><label>Overpack 📦</label><select data-i="${idx}" data-k="overpack">${opOptions(it)}</select></div>
+      </div>
+      <div class="card-foot"><button class="save" data-i="${idx}">💾 Save to Master</button><span class="valid" id="v-${idx}"></span></div>`;
+    wrap.appendChild(card);
+  });
+  wrap.querySelectorAll('input,select').forEach(el=>el.oninput=()=>{
+    let v=el.value; const k=el.dataset.k, i=+el.dataset.i;
+    if(k==='marine_pollutant') v = v==='true';
+    if(k==='overpack'){
+      if(v==='new'){ state.overpackCount=opMax()+1; state.items[i].overpack=state.overpackCount; renderCards(); return; }
+      v = v ? parseInt(v) : null;
+    }
+    state.items[i][k]=v; validate(i);
+    if(['overpack','net_qty','net_unit','pkg_count','gross_kg'].includes(k)) renderOverpackPanel();
+  });
+  wrap.querySelectorAll('.card-remove').forEach(b=>b.onclick=()=>{state.items.splice(+b.dataset.i,1);renderCards();});
+  wrap.querySelectorAll('.save').forEach(b=>b.onclick=()=>saveToMaster(+b.dataset.i,b));
+  state.items.forEach((_,i)=>validate(i));
+  renderOverpackPanel();
+}
+async function saveToMaster(i,btn){
+  const it=state.items[i];
+  const row={product_name:it.product_name,un_number:it.un_number,proper_shipping_name:it.proper_shipping_name,class_division:it.class_division,packing_group:it.packing_group,flashpoint_c:it.flashpoint_c,marine_pollutant:!!it.marine_pollutant,ems:it.ems,packing_instruction:it.packing_instruction,default_pkg_type:it.pkg_type};
+  if (LIVE){ const {error}=await supa.from('dg_master').upsert(row,{onConflict:'un_number,product_name'}); if(error)return alert(error.message); await loadMaster(); }
+  else { if(!state.master.find(m=>m.un_number===it.un_number&&m.product_name===it.product_name)) state.master.push(row); renderMaster(); }
+  btn.textContent='✓ Saved'; setTimeout(()=>btn.textContent='💾 Save to Master',1500);
+}
+function validate(i){
+  const it=state.items[i],el=document.getElementById('v-'+i); if(!el)return;
+  if(it.not_regulated){el.className='valid good';el.textContent='✓ Not DG';return;}
+  const iss=[];
+  if(it.un_number&&!/^UN\d{4}$/i.test((it.un_number||'').trim()))iss.push('UN format');
+  if(!it.proper_shipping_name)iss.push('missing PSN'); if(!it.class_division)iss.push('missing Class');
+  if(!it.pkg_count||!it.net_qty)iss.push('missing quantity');
+  if(state.mode==='ocean'&&!it.gross_kg)iss.push('gross required');
+  el.className=iss.length?'valid warn':'valid good';
+  el.textContent=iss.length?'⚠ '+iss.join(' · '):'✓ Basics complete (DGSA review required)';
+}
+window.renderCards = renderCards;
+addItemBtn.onclick=()=>{state.items.push({product_name:'',confidence:{}});renderCards();};
+
+// ============================ PREVIEW ============================
+function gatherDecl(){
+  const g=id=>(document.getElementById(id).value||'').trim();
+  return {
+    mode:state.mode, reference_no:g('f_ref'), shipper_text:g('f_shipper'), consignee_text:g('f_consignee'),
+    signatory_name:g('f_sign'), place:g('f_place'), declaration_date:g('f_place'), emergency_contact_24h:g('f_emg'),
+    booking:{ booking_no: state.mode==='air'?g('f_awb'):g('f_bl'), flight_or_voyage: state.mode==='air'?g('f_flight'):g('f_voyage'),
+      vessel_name:g('f_vessel'), origin: state.mode==='air'?g('f_dep'):g('f_pol'), destination: state.mode==='air'?g('f_dest'):g('f_pod'),
+      container_no:g('f_container'), seal_no:g('f_seal'), aircraft_limitation:(document.querySelector('input[name=aircraft]:checked')||{}).value },
+    items: state.items.filter(it=>!it.not_regulated),
+    overpacks: opUsed().map(n=>{ const t=opTotals(n), m=state.overpackMeta[n]||{};
+      return { number:n, total_net_quantity:opQtyText(n), note:(m.note||''), gross_kg:t.gross||null, pkgs:t.pkgs, n_items:t.n_items }; }),
+    packer:g('f_packer'), carrier:g('f_carrier'), status:'draft'
+  };
+}
+genBtn.onclick = () => {
+  const d=gatherDecl();
+  previewWrap.innerHTML = d.mode==='air'?airHTML(d):oceanHTML(d);
+  document.getElementById('step-preview').classList.remove('hidden');
+  document.getElementById('step-preview').scrollIntoView({behavior:'smooth'});
+};
+function airHTML(d){
+  const b=d.booking, tr=buildRows(d.items).map(r=> r.kind==='op'
+    ? `<tr class="op-line"><td colspan="6">${r.text}</td></tr>`
+    : (it=>`<tr><td><span class="big">${it.un_number||''}</span></td><td>${it.proper_shipping_name||''}</td><td style="text-align:center">${it.class_division||''}${it.subsidiary_risk?' ('+it.subsidiary_risk+')':''}</td><td style="text-align:center">${it.packing_group||''}</td><td>${it.pkg_count||''} ${it.pkg_type||''} x ${it.net_qty||''} ${it.net_unit||'L'}</td><td style="text-align:center">${it.packing_instruction||''}</td></tr>`)(r.it)).join('');
+  return `<div class="dgd"><div class="stripe l"></div><div class="stripe r"></div><div class="inner">
+    <h3>SHIPPER'S DECLARATION FOR DANGEROUS GOODS</h3><div class="iata-sub">DRAFT — not valid until signed by a DGSA</div>
+    <div class="drow"><div class="dcell" style="flex:1.3"><div class="lab">Shipper</div><div class="val">${d.shipper_text}</div></div><div class="dcell"><div class="lab">Air Waybill No.</div><div class="val">${b.booking_no}</div><div class="lab" style="margin-top:5px">Reference</div><div class="val">${d.reference_no}</div></div></div>
+    <div class="drow"><div class="dcell" style="flex:1.3"><div class="lab">Consignee</div><div class="val">${d.consignee_text}</div></div><div class="dcell"><div class="lab">Shipment type</div><div class="val" style="font-size:9.5px">NON-RADIOACTIVE | <s>radioactive</s></div></div></div>
+    <div class="drow"><div class="dcell"><div class="lab">Airport of Departure</div><div class="val">${b.origin}</div></div><div class="dcell"><div class="lab">Airport of Destination</div><div class="val">${b.destination}</div></div><div class="dcell"><div class="lab">Aircraft Limitation</div><div class="val" style="font-size:9.5px">${b.aircraft_limitation==='CAO'?'<b>CARGO AIRCRAFT ONLY</b>':'PASSENGER AND CARGO'}</div></div></div>
+    <div style="border:1px solid #111;border-top:none;padding:4px 7px;font-size:8px;text-transform:uppercase;color:#555">Nature and Quantity of Dangerous Goods</div>
+    <table class="dgd-table"><thead><tr><th style="width:11%">UN No.</th><th style="width:31%">Proper Shipping Name</th><th style="width:12%">Class</th><th style="width:9%">PG</th><th style="width:27%">Quantity & Type</th><th style="width:10%">Pkg Inst.</th></tr></thead><tbody>${tr||'<tr><td colspan=6 style="text-align:center;color:#999;padding:12px">No items</td></tr>'}</tbody></table>
+    <div class="warn-box"><b>Additional Handling Information:</b> 24 HOUR EMERGENCY CONTACT : ${d.emergency_contact_24h||'—'}</div>
+    <div class="sig-row"><div class="sc"><div class="lab">Name / Title of Signatory</div><div style="min-height:15px;font-weight:500">${d.signatory_name||'&nbsp;'}</div><div style="font-size:8.5px;margin-top:5px;color:#333">I hereby declare that the contents are fully and accurately described above by the proper shipping name, and are classified, packaged, marked and labelled, and are in all respects in proper condition for transport according to applicable international and national governmental regulations.</div></div><div class="sc" style="flex:.55"><div class="lab">Place and Date</div><div style="min-height:15px;font-weight:500">${d.place||'&nbsp;'}</div><div class="lab" style="margin-top:12px">Signature</div><div style="border-bottom:1px solid #111;height:18px"></div></div></div>
+  </div></div>`;
+}
+function oceanHTML(d){
+  const b=d.booking, tr=buildRows(d.items).map(r=> r.kind==='op'
+    ? `<tr class="op-line"><td colspan="8">${r.text}</td></tr>`
+    : (it=>`<tr><td>${it.pkg_count||''} × ${it.pkg_type||''}</td><td><span class="big">${it.un_number||''}</span></td><td>${it.proper_shipping_name||''}${it.marine_pollutant?' <span class="mp-badge">MARINE POLLUTANT</span>':''}</td><td style="text-align:center">${it.class_division||''}</td><td style="text-align:center">${it.packing_group||''}</td><td style="text-align:center">${it.ems||''}</td><td style="text-align:center">${it.flashpoint_c?it.flashpoint_c+'°C':''}</td><td style="text-align:right">${it.net_qty||''} ${it.net_unit||'L'}${it.gross_kg?'<br>'+it.gross_kg+' kg':''}</td></tr>`)(r.it)).join('');
+  return `<div class="imdg"><h3>MULTIMODAL DANGEROUS GOODS FORM</h3><div class="msub">DRAFT — not valid until signed by a DGSA</div>
+    <div class="igrid"><div class="icol"><div class="ibox"><div class="lab">1. Shipper</div><div class="val">${d.shipper_text}</div></div><div class="ibox"><div class="lab">3. Consignee</div><div class="val">${d.consignee_text}</div></div></div>
+    <div class="icol"><div class="ibox"><div class="lab">2. Booking / B/L No.</div><div class="val">${b.booking_no}</div></div><div class="ibox"><div class="lab">Carrier</div><div class="val">${d.carrier||''}</div></div><div class="ibox"><div class="lab">5. Vessel / Voyage</div><div class="val">${b.vessel_name} ${b.flight_or_voyage?'/ '+b.flight_or_voyage:''}</div></div></div>
+    <div class="icol"><div class="ibox"><div class="lab">6. Port of Loading</div><div class="val">${b.origin}</div></div><div class="ibox"><div class="lab">7. Port of Discharge</div><div class="val">${b.destination}</div></div><div class="ibox"><div class="lab">Container / Seal No.</div><div class="val">${b.container_no} / ${b.seal_no}</div></div></div></div>
+    <table class="imdg-table"><thead><tr><th style="width:14%">No. & Type</th><th style="width:9%">UN No.</th><th style="width:26%">Proper Shipping Name</th><th style="width:7%">Class</th><th style="width:6%">PG</th><th style="width:11%">EmS</th><th style="width:8%">Flash</th><th style="width:13%">Net / Gross</th></tr></thead><tbody>${tr||'<tr><td colspan=8 style="text-align:center;color:#999;padding:12px">No items</td></tr>'}</tbody></table>
+    <div class="cert-row"><div class="cc"><span class="lab">Container / Vehicle Packing Certificate</span>It is declared that the goods have been packed into the container in accordance with the applicable provisions.<div style="margin-top:6px"><b>Packed by:</b> ${d.packer||'—'}</div><div style="margin-top:8px">Signature: <span style="display:inline-block;border-bottom:1px solid #111;width:120px"></span></div></div>
+    <div class="cc"><span class="lab">Shipper's Declaration</span>I hereby declare that the contents are fully and accurately described above by the proper shipping name, and are classified, packaged, marked and labelled/placarded, and are in all respects in proper condition for transport.<div style="margin-top:6px"><b>Name:</b> ${d.signatory_name||'—'} &nbsp; <b>Date:</b> ${d.place||'—'}</div><div style="margin-top:8px">Signature: <span style="display:inline-block;border-bottom:1px solid #111;width:120px"></span></div></div></div></div>`;
+}
+
+// ============================ FILL OFFICIAL PDF (Approach B) ============================
+// F-FU062 field map — coordinates verified against the real form (pdf-lib pt, origin bottom-left)
+const FU062_MAP = {
+  fields:{
+    shipper:{x:48,y:800,size:8,lh:11,maxWidth:215},
+    consignee:{x:46,y:704,size:8,lh:11,maxWidth:215},
+    awb:{x:374,y:788,size:9},
+    page_cur:{x:349,y:776,size:9}, page_tot:{x:379,y:776,size:9},
+    reference:{x:487,y:764,size:8},
+    origin:{x:215,y:561,size:9},
+    destination:{x:179,y:527,size:9},
+    emergency:{x:101,y:181,size:8},
+    signatory:{x:374,y:121,size:9},
+    sign_date:{x:410,y:83,size:9},
+  },
+  table:{ start_y:412, floor:215, row_height:55, psn_lh:12, op_height:20,
+    cols:{un:46, psn:85, cls:264, pg:307, qty:333, pi:466} }
+};
+// keep text WinAnsi-safe (pdf-lib standard fonts can't encode some unicode)
+const ascii = s => String(s==null?'':s).replace(/[\u2018\u2019]/g,"'").replace(/[\u201C\u201D]/g,'"').replace(/[^\x20-\x7E\n]/g,'');
+
+document.getElementById('tplInput').onchange = async (e) => {
+  const file = e.target.files[0]; if(!file) return;
+  try { await fillOfficialPDF(await file.arrayBuffer()); }
+  catch(err){ alert('Fill failed: '+err.message); console.error(err); }
+  e.target.value='';
+};
+
+async function fillOfficialPDF(bytes){
+  const { PDFDocument, StandardFonts, rgb } = PDFLib;
+  const d = gatherDecl(); const items = d.items; const M = FU062_MAP;
+  const tpl = await PDFDocument.load(bytes);
+  const out = await PDFDocument.create();
+  const font  = await out.embedFont(StandardFonts.Helvetica);
+  const fontB = await out.embedFont(StandardFonts.HelveticaBold);
+  // estimate each row's height (long n.o.s. names wrap) → chunk into pages
+  const estH = r => r.kind==='op' ? M.table.op_height
+    : Math.max(M.table.row_height,
+        Math.max(2, Math.ceil(ascii(r.it.proper_shipping_name).length/58)) * M.table.psn_lh + 8);
+  const allRows = buildRows(items);
+  const pages=[[]]; let yy=M.table.start_y;
+  for(const r of allRows){ const h=estH(r);
+    if(yy-h < M.table.floor && pages[pages.length-1].length){ pages.push([]); yy=M.table.start_y; }
+    pages[pages.length-1].push(r); yy-=h; }
+  if(!allRows.length) pages[0]=[];
+  const total = pages.length;
+
+  const block=(pg,text,f)=>ascii(text).split('\n').forEach((ln,i)=>
+    pg.drawText(ln,{x:f.x,y:f.y-i*(f.lh||10),size:f.size,font,color:rgb(0,0,0),maxWidth:f.maxWidth,lineHeight:f.lh||10}));
+  const one=(pg,f,txt,bold)=>pg.drawText(ascii(txt),{x:f.x,y:f.y,size:f.size,font:bold?fontB:font,color:rgb(0,0,0)});
+
+  for(let p=0;p<total;p++){
+    const [pg] = await out.copyPages(tpl,[0]); out.addPage(pg);
+    const F=M.fields, b=d.booking;
+    block(pg,d.shipper_text,F.shipper);
+    block(pg,d.consignee_text,F.consignee);
+    one(pg,F.awb,b.booking_no);
+    one(pg,F.page_cur,String(p+1)); one(pg,F.page_tot,String(total));
+    one(pg,F.reference,d.reference_no);
+    one(pg,F.origin,b.origin);
+    one(pg,F.destination,b.destination);
+    one(pg,F.emergency,'24 HOUR EMERGENCY CONTACT : '+(d.emergency_contact_24h||''));
+    one(pg,F.signatory,d.signatory_name);
+    one(pg,F.sign_date,d.place);
+    // DG item rows
+    const T=M.table, C=T.cols; let y=T.start_y;
+    for(const r of pages[p]){
+      if(r.kind==='op'){
+        pg.drawText(ascii(r.text),{x:C.psn,y:y-2,size:8,font:fontB,color:rgb(0,0,0),maxWidth:C.pi-C.psn-6,lineHeight:10});
+        y -= T.op_height; continue;
+      }
+      const it=r.it;
+      pg.drawText(ascii(it.un_number),{x:C.un,y,size:8.5,font:fontB,color:rgb(0,0,0)});
+      pg.drawText(ascii(it.proper_shipping_name),{x:C.psn,y,size:8,font,color:rgb(0,0,0),maxWidth:C.cls-C.psn-6,lineHeight:T.psn_lh});
+      pg.drawText(ascii(it.class_division),{x:C.cls,y,size:9,font,color:rgb(0,0,0)});
+      pg.drawText(ascii(it.packing_group),{x:C.pg,y,size:9,font,color:rgb(0,0,0)});
+      pg.drawText(ascii(`${it.pkg_count||''} ${it.pkg_type||''} x ${it.net_qty||''} ${it.net_unit||'L'}`).trim(),{x:C.qty,y,size:8,font,color:rgb(0,0,0),maxWidth:C.pi-C.qty-6,lineHeight:10});
+      pg.drawText(ascii(it.packing_instruction),{x:C.pi,y,size:9,font,color:rgb(0,0,0)});
+      y -= estH(r);
+    }
+  }
+  const blob = new Blob([await out.save()],{type:'application/pdf'});
+  const url = URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download=`DGD_official_${ascii(d.reference_no||'export').replace(/[^\w.-]/g,'_')}.pdf`; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ============================ EXPORT EXCEL ============================
+window.exportExcel = () => {
+  const d=gatherDecl(), b=d.booking;
+  const wb=XLSX.utils.book_new();
+  const summary=[['DANGEROUS GOODS DECLARATION',''],['Mode',d.mode==='ocean'?'Ocean (IMDG)':'Air (IATA)'],['Reference',d.reference_no],['Shipper',d.shipper_text.replace(/\n/g,' ')],['Consignee',d.consignee_text.replace(/\n/g,' ')],[d.mode==='ocean'?'Booking/BL':'AWB',b.booking_no],[d.mode==='ocean'?'Voyage':'Flight',b.flight_or_voyage],['Vessel',b.vessel_name],['Origin',b.origin],['Destination',b.destination],['Container/Seal',[b.container_no,b.seal_no].filter(Boolean).join(' / ')],['Signatory',d.signatory_name],['Place/Date',d.place],['24h Emergency',d.emergency_contact_24h]];
+  const ws1=XLSX.utils.aoa_to_sheet(summary); ws1['!cols']=[{wch:22},{wch:60}]; XLSX.utils.book_append_sheet(wb,ws1,'Declaration');
+  const head=['#','Overpack','UN No.','Proper Shipping Name','Class','PG','No. Pkgs','Type','Net Qty','Unit','Gross kg','EmS','Pkg Inst.'];
+  let n=0; const rows=buildRows(d.items).map(r=> r.kind==='op'
+    ? ['', '#'+r.n, r.text, '', '', '', '', '', '', '', '', '', '']
+    : (it=>[++n, opOf(it)?'#'+opOf(it):'', it.un_number,it.proper_shipping_name,it.class_division,it.packing_group,it.pkg_count,it.pkg_type,it.net_qty,it.net_unit,it.gross_kg,it.ems,it.packing_instruction])(r.it));
+  const ws2=XLSX.utils.aoa_to_sheet([head,...rows]); ws2['!cols']=[{wch:4},{wch:10},{wch:10},{wch:46},{wch:6},{wch:5},{wch:9},{wch:16},{wch:8},{wch:5},{wch:9},{wch:11},{wch:9}];
+  XLSX.utils.book_append_sheet(wb,ws2,'DG Items');
+  if(d.overpacks.length){
+    const oh=[['Overpack','Items','Packages','Total Net Quantity','Gross kg','Note']];
+    d.overpacks.forEach(o=>oh.push(['#'+o.number,o.n_items,o.pkgs,o.total_net_quantity,o.gross_kg,o.note]));
+    const ws3=XLSX.utils.aoa_to_sheet(oh); ws3['!cols']=[{wch:10},{wch:8},{wch:10},{wch:24},{wch:10},{wch:20}];
+    XLSX.utils.book_append_sheet(wb,ws3,'Overpacks');
+  }
+  XLSX.writeFile(wb,`DGD_${(d.reference_no||'export').replace(/[^\w.-]/g,'_')}.xlsx`);
+};
+
+// ============================ SAVE TO DB ============================
+window.saveDeclaration = async () => {
+  if (!LIVE) return alert('Demo mode — set CONFIG (Supabase) first to enable saving');
+  const d=gatherDecl(), b=d.booking;
+  const { data:booking } = await supa.from('dgd_bookings').insert({ mode:d.mode, booking_no:b.booking_no, flight_or_voyage:b.flight_or_voyage, vessel_name:b.vessel_name, aircraft_limitation:b.aircraft_limitation, origin:b.origin, destination:b.destination, container_no:b.container_no, seal_no:b.seal_no }).select().single();
+  const { data:decl, error } = await supa.from('dgd_declarations').insert({ mode:d.mode, reference_no:d.reference_no, booking_id:booking?.id, shipper_text:d.shipper_text, consignee_text:d.consignee_text, signatory_name:d.signatory_name, place:d.place, emergency_contact_24h:d.emergency_contact_24h, status:'draft' }).select().single();
+  if (error) return alert(error.message);
+  // overpacks first, so items can reference them
+  const opMapId={};
+  if (d.overpacks.length){
+    const { data:ops, error:opErr } = await supa.from('dgd_overpacks')
+      .insert(d.overpacks.map(o=>({ declaration_id:decl.id, overpack_number:o.number,
+        total_net_quantity:o.total_net_quantity||null, all_packed_note:o.note||null }))).select();
+    if (opErr) return alert(opErr.message);
+    (ops||[]).forEach(o=>{ opMapId[o.overpack_number]=o.id; });
+  }
+  const ordered=buildRows(d.items).filter(r=>r.kind==='item').map(r=>r.it);
+  const items=ordered.map((it,i)=>({ declaration_id:decl.id, line_order:i, overpack_id:opMapId[opOf(it)]||null, un_number:it.un_number, proper_shipping_name:it.proper_shipping_name, class_division:it.class_division, packing_group:it.packing_group, pkg_count:parseInt(it.pkg_count)||null, pkg_type:it.pkg_type, net_qty:parseFloat(it.net_qty)||null, net_unit:it.net_unit, gross_kg:parseFloat(it.gross_kg)||null, ems:it.ems, packing_instruction:it.packing_instruction }));
+  await supa.from('dgd_items').insert(items);
+  alert('Saved (status: draft) — a DGSA can now review and sign');
+};
+
+// ============================ INIT ============================
+setMode('air');
+refreshSession();
+if (!LIVE) loadMaster();
+</script>
+</body>
+</html>
