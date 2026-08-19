@@ -19,3 +19,7 @@
   from = "/deckstudio"
   to = "/Deckstudio.html"
   status = 200
+[[redirects]]
+  from = "/dgify"
+  to = "/dgify.html"
+  status = 200
