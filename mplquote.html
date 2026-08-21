@@ -1890,7 +1890,7 @@ const SUPABASE_URL = 'https://ptgyxdtpjvjzrwgqzekh.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_f4AlQCL7CVTgoT1hA7KR3g_eItQDHs_';
 
 /* ── CRM app URL — for "Create Deal" cross-link from My Quotations ── */
-const CRM_URL = '/mplcrm'; // adjust to where you host the CRM page
+const CRM_URL = '/crm'; // adjust to where you host the CRM page
 
 /* ── Role definitions ──
    Roles match app_role enum: org_admin | manager | sales | cs | pricing | viewer
@@ -3213,9 +3213,6 @@ async function loadMyQuotes(){
     myQuotesData = demoData;
     _myQuotesRaw = demoData;
     populateMyMonthFilter(_myQuotesRaw);
-    const curMonth = new Date().toISOString().slice(0,7);
-    const sel = document.getElementById('myMonthFilter');
-    if(sel && [...sel.options].some(o=>o.value===curMonth)) sel.value = curMonth;
     filterMyQuotesAll();
     return;
   }
@@ -3225,9 +3222,6 @@ async function loadMyQuotes(){
     myQuotesData = data||[];
     _myQuotesRaw = myQuotesData;
     populateMyMonthFilter(_myQuotesRaw);
-    const curMonth = new Date().toISOString().slice(0,7);
-    const sel = document.getElementById('myMonthFilter');
-    if(sel && [...sel.options].some(o=>o.value===curMonth)) sel.value = curMonth;
     filterMyQuotesAll();
   }catch(e){ toast(e.message,'error'); }
 }
@@ -3421,8 +3415,6 @@ function populateFilters(quotes){
   salesSel.innerHTML='<option value="">All Sales</option>'+[...salesSet].sort().map(s=>`<option>${s}</option>`).join('');
   const monSel=document.getElementById('allMonthFilter');
   monSel.innerHTML='<option value="">All Months</option>'+[...monthSet].sort().reverse().map(m=>`<option value="${m}">${m}</option>`).join('');
-  const curMonth=new Date().toISOString().slice(0,7);
-  if([...monthSet].includes(curMonth)) monSel.value=curMonth;
   filterAllQuotes();
 }
 
