@@ -241,7 +241,7 @@
                 <div class="nav-item" onclick="switchTab('page-booking-instruction', this)">📋 Booking Instruction</div>
                 <div class="nav-item" onclick="switchTab('page-coldemail', this)">📧 Marketing Email Prompt</div>
                 
-                <div class="nav-item" onclick="window.open('/mplquote', '_blank')">🔗 Quotes & Pricing</div>
+                <div class="nav-item" onclick="window.open('/quote', '_blank')">🔗 Quotes & Pricing</div>
 
                 <div style="font-size: 9px; color: rgba(255,255,255,0.65); margin: 10px 0 4px 0; text-transform: uppercase; letter-spacing: .8px; font-weight:600;">Highlights & Issues</div>
                                                                 <div class="nav-item" onclick="switchTab('page-complain', this)">🗣️ Voice of Customer</div>
@@ -955,6 +955,7 @@
                         <th style="padding:10px 12px;color:var(--primary);font-weight:700;">🎯 Objective</th>
                         <th style="padding:10px 12px;color:var(--primary);font-weight:700;">📝 Summary</th>
                         <th style="padding:10px 12px;color:var(--primary);font-weight:700;">👤 Sales Rep</th>
+                        <th style="padding:10px 12px;color:var(--primary);font-weight:700;">🤝 Co-visit</th>
                         <th style="padding:10px 12px;color:var(--primary);font-weight:700;">Status</th>
                         <th style="padding:10px 12px;color:var(--primary);font-weight:700;">Action</th>
                       </tr>
@@ -2320,6 +2321,13 @@
         // Roles that see ALL team data (not filtered to self)
         const SEES_ALL_ROLES = ['org_admin','manager','viewer','cs','pricing'];
         function isSalesOnly() { return !SEES_ALL_ROLES.includes(myRole); }
+        // Co-visit: team roster cached from loadDropdowns() so we can resolve co_visitor_id → name
+        // without adding a second embedded join to every meetings query.
+        function teamNameById(id) {
+            if(!id) return '';
+            const t = (window._teamList||[]).find(x => String(x.id) === String(id));
+            return t ? (t.name||'') : '';
+        }
         let rawDealsData = [], rawClientsData = [], rawColdCallsData = [], rawMeetsData = [], rawShipmentsData = [], rawShipmentsAll = [];
         let rawMeetsAll = [];  // Meetings module: month/year-unfiltered (sales filter still applied)
         let rawKanbanDeals = [], pipelineView = 'all';  // Deal Pipeline view state
@@ -3373,7 +3381,12 @@
 
         async function loadDropdowns() {
             const { data: team } = await db.from('user_profiles').select('*').eq('is_active', true); const { data: clients } = await db.from('clients').select('*').order('company_name', { ascending: true });
+            window._teamList = team || [];
             let sOpts = ''; (team || []).forEach(t => sOpts += `<option value="${t.id}">${t.name}</option>`);
+            // Co-visit dropdown gets its own blank option and is never locked by role —
+            // a Sales user must stay free to name whoever joined the visit.
+            const _coEl = document.getElementById('new-meet-covisit');
+            if(_coEl) _coEl.innerHTML = '<option value="">— None —</option>' + sOpts;
             ['new-deal-sales','cc-sales','new-client-sales','new-meet-sales','comp-sales','led-sales','graph-input-sales','cm-sales'].forEach(id => { if(document.getElementById(id)) document.getElementById(id).innerHTML = sOpts; });
             document.getElementById('filter-sales').innerHTML = '<option value="all">Everyone</option>' + sOpts;
             const sortedClients = (clients || []).slice().sort((a,b) => (a.company_name||'').localeCompare(b.company_name||''));
@@ -3433,7 +3446,10 @@
                 const yearFilter  = document.getElementById('filter-year')?.value || 'all';
                 let salesFilter   = document.getElementById('filter-sales').value || 'all';
                 // Sales role always sees only own data; all other roles respect the dropdown
-                if (isSalesOnly()) { salesFilter = myProfileId; }
+                // Meetings are org-wide: the Sales role sees every rep's meetings.
+                // forcedSalesScope = true means the narrowing was imposed by role, not chosen in the dropdown.
+                const forcedSalesScope = isSalesOnly();
+                if (forcedSalesScope) { salesFilter = myProfileId; }
 
                 const [resDeals, resMeets, resCC, resClients, resComp, resShip] = await Promise.all([
                     db.from('deals').select(`*, user_profiles(name), status_changed_at, notes`), db.from('meetings').select(`*, user_profiles(name)`).order('meeting_date', { ascending: false }),
@@ -3450,7 +3466,7 @@
                   : (resShip.data||[]);
 
                 // Note: Clients (customer master) are org-wide — visible to everyone incl. Sales role, never narrowed by salesperson.
-                if(salesFilter !== 'all') { fDeals = fDeals.filter(x => x.sales_person_id == salesFilter); fMeets = fMeets.filter(x => x.sales_person_id == salesFilter); fCC = fCC.filter(x => x.sales_person_id == salesFilter); fComp = fComp.filter(x => x.sales_person_id == salesFilter); fShip = fShip.filter(x => x.user_id == salesFilter); }
+                if(salesFilter !== 'all') { fDeals = fDeals.filter(x => x.sales_person_id == salesFilter); if(!forcedSalesScope) fMeets = fMeets.filter(x => x.sales_person_id == salesFilter); fCC = fCC.filter(x => x.sales_person_id == salesFilter); fComp = fComp.filter(x => x.sales_person_id == salesFilter); fShip = fShip.filter(x => x.user_id == salesFilter); }
                 // Keep unfiltered-by-month copies for Activity Report and Complaints modal
                 const actMeets   = [...fMeets];
                 const actCC      = [...fCC];
@@ -5071,7 +5087,7 @@
           const listSrc = mlm ? rawMeetsAll.filter(m=>(m.meeting_date||'').startsWith(mlm)) : rawMeetsAll;
           const sorted = [...listSrc].sort((a,b)=>(b.meeting_date||'').localeCompare(a.meeting_date||''));
           mList.innerHTML = '';
-          if(sorted.length===0){mList.innerHTML=`<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--text-muted);">No meetings yet</td></tr>`;return;}
+          if(sorted.length===0){mList.innerHTML=`<tr><td colspan="9" style="text-align:center;padding:24px;color:var(--text-muted);">No meetings yet</td></tr>`;return;}
           sorted.forEach(m=>{
             const sName=(m.user_profiles&&m.user_profiles.name)?m.user_profiles.name:'Unknown';
             const st=m.status||'appointed';
@@ -5107,6 +5123,7 @@
               <td style="padding:9px 12px;max-width:160px;${tdStyle}">${m.objective||'—'}</td>
               <td style="padding:9px 12px;font-size:11px;color:var(--text-muted);max-width:180px;">${m.summary||'—'}</td>
               <td style="padding:9px 12px;font-size:11px;">${sName}</td>
+              <td style="padding:9px 12px;font-size:11px;color:var(--text-muted);">${teamNameById(m.co_visitor_id)||'—'}</td>
               <td style="padding:9px 12px;"><span class="meet-badge ${statusCfg.cls}">${statusCfg.label}</span></td>
               <td style="padding:9px 12px;">${actionBtns}</td>
             </tr>`;
@@ -5148,6 +5165,7 @@
             document.getElementById('new-meet-objective').value = m.objective||'';
             document.getElementById('new-meet-summary').value = m.summary||'';
             document.getElementById('new-meet-sales').value = m.sales_person_id||myProfileId||'';
+            document.getElementById('new-meet-covisit').value = m.co_visitor_id||'';
             meetSetStatus(m.status||'appointed');
           } else {
             if(clientSel&&rawClientsData.length>0) clientSel.value=rawClientsData[0].company_name||'';
@@ -5157,6 +5175,7 @@
             document.getElementById('new-meet-objective').value = '';
             document.getElementById('new-meet-summary').value = '';
             document.getElementById('new-meet-sales').value = myProfileId||'';
+            document.getElementById('new-meet-covisit').value = '';
             meetSetStatus('appointed');
           }
           modal.classList.add('show');
@@ -5192,14 +5211,16 @@
           const objective = document.getElementById('new-meet-objective').value;
           const summary = document.getElementById('new-meet-summary').value;
           const salesId = document.getElementById('new-meet-sales').value;
+          const coVisitId = document.getElementById('new-meet-covisit').value;
           const status = document.getElementById('new-meet-status').value||'appointed';
           if(!company||!date) return alert('Customer and Date are required.');
+          if(coVisitId && String(coVisitId) === String(salesId)) return alert('Co-visit must be a different person from the Sales Rep.');
           if(status==='completed' && !summary.trim()) {
             alert('⚠️ Summary / Notes is required when setting status to Completed.\n\nPlease describe the meeting outcome before saving.');
             document.getElementById('new-meet-summary').focus();
             return;
           }
-          const payload = {company, meeting_date:date, meeting_time:time||null, meeting_address:address||null, objective:objective||null, summary:summary||null, sales_person_id:salesId||null, status};
+          const payload = {company, meeting_date:date, meeting_time:time||null, meeting_address:address||null, objective:objective||null, summary:summary||null, sales_person_id:salesId||null, co_visitor_id:coVisitId||null, status};
           let res;
           if(editingMeetingId){ res = await db.from('meetings').update(payload).eq('id',editingMeetingId); }
           else { res = await db.from('meetings').insert([payload]); }
@@ -9153,6 +9174,7 @@ Thank you so much.`;
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
         <div class="form-group"><label>Customer *</label><select id="new-meet-client"></select></div>
         <div class="form-group"><label>Sales Rep</label><select id="new-meet-sales"></select></div>
+        <div class="form-group" style="grid-column:span 2;"><label>🤝 Co-visit by</label><select id="new-meet-covisit"></select></div>
         <div class="form-group"><label>Date *</label><input type="date" id="new-meet-date"></div>
         <div class="form-group"><label>Time</label><input type="time" id="new-meet-time"></div>
         <div class="form-group" style="grid-column:span 2;"><label>Location / Address</label><textarea id="new-meet-address" rows="1" style="width:100%;padding:7px 9px;border:1px solid var(--text-muted);border-radius:5px;font-family:inherit;font-size:12px;box-sizing:border-box;"></textarea></div>
