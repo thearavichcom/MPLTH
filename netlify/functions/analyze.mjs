@@ -36,17 +36,14 @@ const CLASSIFY_SECTIONS = `Respond in Markdown using EXACTLY these 5 headings, i
 8-digit AHTN code, official nomenclature wording, confidence level. Max 3 lines.
 
 ## Duty & Tax
-You have NO access to the ITD tariff database and CANNOT look up rates. Therefore:
-- NEVER state, estimate, guess or recall a numeric import duty rate. Not "10%", not "approximately 5%", not "typically 0-5%", not a range, not "likely duty-free". No number at all.
-- Instead write exactly: "Import duty rate: verify at http://itd.customs.go.th/igtf/viewerImportTariff.do?param=main"
-- VAT: state Thailand's standard 7% (statutory, not code-dependent).
-- FTA: name only whether an agreement is in force with the stated origin and the correct certificate of origin form. Never state a preferential rate — direct the user to the same ITD link. If no FTA is in force, say so plainly.
-- Note AD / Safeguard exposure only as a risk to check with the Department of Foreign Trade, never as a figure.
-Mandatory section — never omit.
+- MFN duty rate: you have NO access to the ITD database. NEVER state, estimate or recall a numeric MFN rate — no number, no range, no "likely duty-free". Write only: "อัตราอากร MFN: ตรวจสอบที่ http://itd.customs.go.th/igtf/viewerImportTariff.do?param=main"
+- VAT: Thailand's standard 7% (statutory, not code-dependent).
+- FTA: state (a) whether an agreement is in force with the stated origin, (b) whether this heading is normally covered or sits on a sensitive / exclusion list, (c) the preferential rate you believe applies, and (d) the certificate of origin form. Label the rate "อัตราอ้างอิง — ต้องยืนยัน" / "indicative — must be confirmed" and give the ITD privilege link http://itd.customs.go.th/igtf/ViewerPrivilege.do?param=main . Say plainly if no FTA is in force.
+- AD / Safeguard: flag as a risk to check with the Department of Foreign Trade. Never give a figure.
+Max 6 lines. Mandatory section — never omit.
 
 ## Licences & Controls
-Name the controlling agency (e.g. Department of Livestock Development, FDA, TISI, Department of Foreign Trade) and any permit, standard or NSW measure. If genuinely unrestricted, write "Freely importable — no additional licence required." Then list documents beyond Invoice / Packing List / BL.
-Mandatory section — never omit.
+Name the controlling agency (e.g. Department of Livestock Development, FDA, TISI, Department of Foreign Trade) and any permit, standard or NSW measure. If genuinely unrestricted, write "Freely importable — no additional licence required." Then list documents beyond Invoice / Packing List / BL. Max 6 lines. Mandatory section — never omit.
 
 ## Classification Rationale (GIR)
 Heading (GIR 1 + governing Section/Chapter Note), then 6-digit and 8-digit (GIR 6). Name the criterion at each level. Add any seriously arguable alternative code and why it was rejected. HARD LIMIT: 5 bullets, one line each.
@@ -168,6 +165,8 @@ export default async (req) => {
     { type: "text", text: userText },
   ];
 
+  const outLang = lang === "th" ? "th" : "en";
+
   /* ── upstream call, streaming ── */
   let upstream;
   try {
@@ -180,9 +179,9 @@ export default async (req) => {
       },
       body: JSON.stringify({
         model: MODEL,
-        max_tokens: 1800,
+        max_tokens: outLang === "th" ? 4500 : 1800,
         stream: true,
-        system: buildSystem(mode, lang === "th" ? "th" : "en", images.length > 0),
+        system: buildSystem(mode, outLang, images.length > 0),
         messages: [{ role: "user", content }],
       }),
     });
