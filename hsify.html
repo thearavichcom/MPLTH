@@ -72,6 +72,18 @@ body {
 .badge { font-size: 10px; padding: 4px 10px; border-radius: 3px; letter-spacing: 0.8px; font-weight: 500; }
 .badge-solid { background: #fff; color: var(--brand); }
 .badge-outline { border: 1px solid rgba(255,255,255,0.4); color: rgba(255,255,255,0.85); }
+.lang-toggle {
+  display: flex; border: 1px solid rgba(255,255,255,0.4);
+  border-radius: 4px; overflow: hidden; margin-right: 4px;
+}
+.lang-btn {
+  background: none; border: none; cursor: pointer;
+  color: rgba(255,255,255,0.75);
+  font-family: var(--font); font-size: 11px; font-weight: 500;
+  padding: 4px 10px; letter-spacing: 0.4px; transition: all 0.15s;
+}
+.lang-btn:hover { color: #fff; background: rgba(255,255,255,0.12); }
+.lang-btn.active { background: #fff; color: var(--brand); }
 
 /* ── LAYOUT ── */
 .layout {
@@ -326,6 +338,10 @@ input.mono { font-family: var(--font-mono); letter-spacing: 2px; font-size: 15px
     <button class="nav-btn" onclick="switchTab(this,'info')">System Info</button>
   </nav>
   <div class="header-badges">
+    <div class="lang-toggle" title="Report language">
+      <button class="lang-btn" id="lang-en" onclick="setLang('en')">EN</button>
+      <button class="lang-btn active" id="lang-th" onclick="setLang('th')">ไทย</button>
+    </div>
     <span class="badge badge-solid">CLAUDE AI</span>
     <span class="badge badge-outline">AHTN 2022</span>
   </div>
@@ -690,15 +706,14 @@ function renderThumbs() {
   }
 }
 
-/* Thai script anywhere in the user's own text → answer in Thai */
-function detectLang() {
-  const typed = [
-    document.getElementById('inp-desc').value,
-    document.getElementById('inp-extra').value,
-    document.getElementById('inp-vdesc').value
-  ].join(' ');
-  return /[\u0E00-\u0E7F]/.test(typed) ? 'th' : 'en';
+/* Report language — user-controlled via the header toggle. Defaults to Thai. */
+let reportLang = 'th';
+function setLang(l) {
+  reportLang = (l === 'en') ? 'en' : 'th';
+  document.getElementById('lang-en').classList.toggle('active', reportLang === 'en');
+  document.getElementById('lang-th').classList.toggle('active', reportLang === 'th');
 }
+function detectLang() { return reportLang; }
 
 /* ══════════════ API (streaming) ══════════════ */
 async function callAPIStream(payload, onChunk) {
