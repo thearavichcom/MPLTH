@@ -690,6 +690,16 @@ function renderThumbs() {
   }
 }
 
+/* Thai script anywhere in the user's own text → answer in Thai */
+function detectLang() {
+  const typed = [
+    document.getElementById('inp-desc').value,
+    document.getElementById('inp-extra').value,
+    document.getElementById('inp-vdesc').value
+  ].join(' ');
+  return /[\u0E00-\u0E7F]/.test(typed) ? 'th' : 'en';
+}
+
 /* ══════════════ API (streaming) ══════════════ */
 async function callAPIStream(payload, onChunk) {
   let res;
@@ -878,6 +888,7 @@ async function runClassify() {
         mode: 'classify',
         description: desc,
         origin, purpose, extra,
+        lang: detectLang(),
         images: attached.map(i => ({ media_type: i.media_type, data: i.data }))
       },
       (md) => {
@@ -910,7 +921,7 @@ async function runVerify() {
   let opened = false;
   try {
     await callAPIStream(
-      { mode: 'verify', hsCode: hs, description: desc },
+      { mode: 'verify', hsCode: hs, description: desc, lang: detectLang() },
       (md) => {
         if (!opened) { openResultCard('VERIFICATION REPORT', `${hs} — ${desc}`, '', 0); opened = true; }
         updateResultBody(md);
