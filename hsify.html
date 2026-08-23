@@ -212,6 +212,12 @@ input.mono { font-family: var(--font-mono); letter-spacing: 2px; font-size: 15px
 .result-card-origin { font-size: 11px; color: var(--text3); margin-top: 2px; }
 .result-card-time { font-size: 11px; color: var(--text3); font-family: var(--font-mono); white-space: nowrap; }
 .result-card-body { padding: 20px; }
+.live-dot {
+  display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--green); margin-left: 7px; vertical-align: middle;
+  animation: pulse 1.2s ease-in-out infinite;
+}
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.25; } }
 
 /* ── MARKDOWN RESULT ── */
 .rs-title {
@@ -684,8 +690,8 @@ function renderThumbs() {
   }
 }
 
-/* ══════════════ API ══════════════ */
-async function callAPI(payload) {
+/* ══════════════ API (streaming) ══════════════ */
+async function callAPIStream(payload, onChunk) {
   let res;
   try {
     res = await fetch(API_URL, {
@@ -697,20 +703,43 @@ async function callAPI(payload) {
     throw new Error('Could not reach the analysis service — check your connection and try again.');
   }
 
-  if (res.status === 413) throw new Error('The attached images are too large. Remove one and try again.');
-  if (res.status === 502 || res.status === 504) throw new Error('The analysis timed out. Try fewer images or a shorter description.');
+  const ctype = res.headers.get('content-type') || '';
 
-  const text = await res.text();
-  let data;
-  try {
-    data = JSON.parse(text);
-  } catch {
-    console.error('Non-JSON response:', text.slice(0, 300));
+  // Errors always come back as JSON; a successful analysis comes back as a text stream.
+  if (!res.ok || ctype.includes('application/json')) {
+    const text = await res.text();
+    let data = null;
+    try { data = JSON.parse(text); } catch { /* not JSON */ }
+    if (data && data.error) throw new Error(data.error);
+    if (res.status === 413) throw new Error('The attached images are too large. Remove one and try again.');
+    if (res.status === 502 || res.status === 504) throw new Error('The analysis timed out. Try fewer images or a shorter description.');
+    console.error('Unexpected response:', text.slice(0, 300));
     throw new Error(`The service returned an unexpected response (HTTP ${res.status}). Check the Netlify function logs.`);
   }
-  if (!res.ok) throw new Error(data.error || `Request failed (HTTP ${res.status})`);
-  if (!data.result) throw new Error('No result was returned — please try again.');
-  return data;
+
+  if (!res.body || typeof res.body.getReader !== 'function') {
+    const text = await res.text();          // very old browser — fall back to buffered read
+    onChunk(text);
+    return text;
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let full = '';
+  let lastPaint = 0;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    full += decoder.decode(value, { stream: true });
+    const now = Date.now();
+    if (now - lastPaint > 120) { lastPaint = now; onChunk(full); }   // throttle repaints
+  }
+  full += decoder.decode();
+  onChunk(full);
+
+  if (!full.trim()) throw new Error('No result was returned — please try again.');
+  return full;
 }
 
 /* ══════════════ MARKDOWN → HTML ══════════════ */
@@ -776,14 +805,11 @@ function showError(msg) {
     </div></div>`;
 }
 
-function showResult(label, data, subject, origin, imageCount) {
+/* Build the card shell once; the body is then filled in as the stream arrives. */
+function openResultCard(label, subject, origin, imageCount) {
   const time = new Date().toLocaleString('en-GB', {
     hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short', year: '2-digit'
   });
-  const truncated = data.meta && data.meta.truncated
-    ? `<div class="disclaimer" style="background:#fef2f2;border-color:#fecaca;color:#991b1b;">The response was cut off before completing every section. Shorten the description or reduce the number of images.</div>`
-    : '';
-
   document.getElementById('placeholder').style.display = 'none';
   const area = document.getElementById('result-area');
   area.style.display = 'block';
@@ -791,7 +817,7 @@ function showResult(label, data, subject, origin, imageCount) {
   <div class="result-card">
     <div class="result-card-header">
       <div>
-        <div class="result-card-label">${label}</div>
+        <div class="result-card-label">${label}<span class="live-dot" id="live-dot"></span></div>
         <div class="result-card-product">${subject.slice(0, 70)}${subject.length > 70 ? '…' : ''}</div>
         ${origin ? `<div class="result-card-origin">Origin: ${origin}</div>` : ''}
         ${imageCount ? `<div class="result-card-origin">${imageCount} image${imageCount > 1 ? 's' : ''} analysed</div>` : ''}
@@ -799,16 +825,28 @@ function showResult(label, data, subject, origin, imageCount) {
       <div class="result-card-time">${time}</div>
     </div>
     <div class="result-card-body">
-      ${parseMarkdown(data.result)}
-      ${truncated}
-      <div class="disclaimer">
-        <strong>⚠ Note:</strong> AI-generated analysis under AHTN 2022 (Tariff Decree No.7, B.E. 2564, in force 1 Jan 2022). Preliminary reference only — always confirm on the
-        <a href="http://itd.customs.go.th/igtf/viewerImportTariff.do?param=main" target="_blank" style="color:var(--amber);">Thai Customs ITD system</a>
-        and with a licensed customs broker.
-      </div>
+      <div id="md-body"><p class="md-p" style="color:var(--text3);">Analysing…</p></div>
+      <div id="result-footer"></div>
     </div>
   </div>`;
   area.scrollTop = 0;
+}
+
+function updateResultBody(markdown) {
+  const el = document.getElementById('md-body');
+  if (el) el.innerHTML = parseMarkdown(markdown);
+}
+
+function closeResultCard() {
+  const dot = document.getElementById('live-dot');
+  if (dot) dot.remove();
+  const footer = document.getElementById('result-footer');
+  if (footer) footer.innerHTML = `
+    <div class="disclaimer">
+      <strong>⚠ Note:</strong> AI-generated analysis under AHTN 2022 (Tariff Decree No.7, B.E. 2564, in force 1 Jan 2022). Preliminary reference only — always confirm on the
+      <a href="http://itd.customs.go.th/igtf/viewerImportTariff.do?param=main" target="_blank" style="color:var(--amber);">Thai Customs ITD system</a>
+      and with a licensed customs broker.
+    </div>`;
 }
 
 /* ══════════════ ACTIONS ══════════════ */
@@ -830,17 +868,27 @@ async function runClassify() {
   btn.textContent = 'Analysing…';
   showLoading(
     attached.length ? 'Analysing images and product details…' : 'Analysing HS Code classification…',
-    'Applying GIR 1–6 against AHTN 2022 — this can take up to 30 seconds'
+    'Applying GIR 1–6 against AHTN 2022'
   );
 
+  let opened = false;
   try {
-    const data = await callAPI({
-      mode: 'classify',
-      description: desc,
-      origin, purpose, extra,
-      images: attached.map(i => ({ media_type: i.media_type, data: i.data }))
-    });
-    showResult('CLASSIFICATION REPORT', data, desc || 'Image-based classification', origin, attached.length);
+    await callAPIStream(
+      {
+        mode: 'classify',
+        description: desc,
+        origin, purpose, extra,
+        images: attached.map(i => ({ media_type: i.media_type, data: i.data }))
+      },
+      (md) => {
+        if (!opened) {
+          openResultCard('CLASSIFICATION REPORT', desc || 'Image-based classification', origin, attached.length);
+          opened = true;
+        }
+        updateResultBody(md);
+      }
+    );
+    closeResultCard();
   } catch (e) {
     showError(e.message);
   } finally {
@@ -859,9 +907,16 @@ async function runVerify() {
   btn.textContent = 'Verifying…';
   showLoading('Verifying HS Code…', 'Testing the code against the heading text and Chapter Notes');
 
+  let opened = false;
   try {
-    const data = await callAPI({ mode: 'verify', hsCode: hs, description: desc });
-    showResult('VERIFICATION REPORT', data, `${hs} — ${desc}`, '', 0);
+    await callAPIStream(
+      { mode: 'verify', hsCode: hs, description: desc },
+      (md) => {
+        if (!opened) { openResultCard('VERIFICATION REPORT', `${hs} — ${desc}`, '', 0); opened = true; }
+        updateResultBody(md);
+      }
+    );
+    closeResultCard();
   } catch (e) {
     showError(e.message);
   } finally {
