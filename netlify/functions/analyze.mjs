@@ -30,38 +30,40 @@ GIR method:
 
 Honesty: give a confidence level; never invent a rate or licence; list missing determinative facts instead of guessing; if two codes are arguable, say so.`;
 
-const CLASSIFY_SECTIONS = `Respond in Markdown using EXACTLY these 5 headings:
+const CLASSIFY_SECTIONS = `Respond in Markdown using EXACTLY these 5 headings, in this order:
 
 ## Recommended Classification
-8-digit AHTN code, official nomenclature wording, confidence level.
-
-## Classification Rationale (GIR)
-Heading (GIR 1 + governing Note) then 6-digit and 8-digit (GIR 6). Name the criterion at each level. Add any seriously arguable alternative code and why you rejected it. Max 6 lines.
+8-digit AHTN code, official nomenclature wording, confidence level. Max 3 lines.
 
 ## Duty, Tax & FTA
-Indicative MFN rate, VAT, AD/Safeguard exposure. FTA treatment for the stated origin only — name the CO form, or state plainly that no FTA applies. Do not assume 0% for sensitive goods such as steel. Confirm at http://itd.customs.go.th/igtf/viewerImportTariff.do?param=main
+Indicative MFN duty rate, VAT (Thailand standard 7%), excise if any, and AD/Safeguard exposure. FTA treatment for the stated origin only — name the certificate of origin form, or state plainly that no FTA applies and MFN stands. Never assume 0% for sensitive goods such as steel. Always state that rates must be confirmed at http://itd.customs.go.th/igtf/viewerImportTariff.do?param=main
+This section is mandatory — if you are unsure of a figure, say so, but still name the controlling rate type and the verification link. Never omit it.
 
-## Licences & Documents
-Permits, standards, NSW measures, plus documents beyond Invoice/Packing List/BL. Write "Freely importable" if unrestricted.
+## Licences & Controls
+Name the controlling agency (e.g. Department of Livestock Development, FDA, TISI, Department of Foreign Trade) and any permit, standard or NSW measure. If genuinely unrestricted, write "Freely importable — no additional licence required." Then list documents beyond Invoice / Packing List / BL.
+This section is mandatory. Never omit it.
+
+## Classification Rationale (GIR)
+Heading (GIR 1 + governing Section/Chapter Note), then 6-digit and 8-digit (GIR 6). Name the criterion at each level. Add any seriously arguable alternative code and why it was rejected. HARD LIMIT: 5 bullets, one line each.
 
 ## Information Still Needed
-Facts that would confirm or change this. "None" only if genuinely complete.
+Facts that would confirm or change this. "None" only if genuinely complete. Max 4 bullets.
 
-Be terse. Bullets over prose. No preamble.`;
+Be terse throughout. Bullets over prose. No preamble, no closing summary.`;
 
-const VERIFY_SECTIONS = `Respond in Markdown using EXACTLY these 4 headings:
+const VERIFY_SECTIONS = `Respond in Markdown using EXACTLY these 4 headings, in this order:
 
 ## Verdict
-✅ Correct / ⚠ Arguable / ❌ Incorrect, plus a confidence level.
-
-## Assessment (GIR)
-Test the code against the heading text and binding Notes. GIR 1 for the heading, GIR 6 for the 6- and 8-digit levels. Name the criterion at each level. Max 6 lines.
+✅ Correct / ⚠ Arguable / ❌ Incorrect, plus a confidence level. Max 2 lines.
 
 ## Recommended Code
-Only if different. Otherwise "The submitted code is appropriate."
+Only if different from the submitted code. Otherwise "The submitted code is appropriate."
 
-## Duty & Information Still Needed
-Indicative rates flagged for ITD verification, and any missing determinative facts.
+## Duty, Tax & Controls
+Indicative MFN rate, VAT, controlling agency and any permit. Flag that rates need ITD verification. Mandatory — never omit.
+
+## Assessment (GIR)
+Test the code against the heading text and binding Notes. GIR 1 for the heading, GIR 6 for the 6- and 8-digit levels. HARD LIMIT: 5 bullets, one line each. End with any missing determinative facts.
 
 Be terse. Bullets over prose. No preamble.`;
 
@@ -69,7 +71,7 @@ const IMAGE_INSTRUCTION = `Images attached: state what is visible (form, materia
 
 const langLine = (lang) =>
   lang === "th"
-    ? `Write the entire response in Thai. Keep tariff codes, form names and legal instrument names in their official form. Keep the Markdown headings in English exactly as specified.`
+    ? `Write the entire response in Thai. Keep the Markdown headings in English exactly as specified. Keep tariff codes, certificate form names and legal instrument names in their official form. Use standard Thai customs terminology: อัตราอากรขาเข้า, ภาษีมูลค่าเพิ่ม, ใบอนุญาตนำเข้า, หน่วยงานผู้ควบคุม.`
     : `Write the entire response in English. Keep Thai legal instrument names in Thai script with an English gloss on first mention.`;
 
 const buildSystem = (mode, lang, hasImages) =>
@@ -173,7 +175,7 @@ export default async (req) => {
       },
       body: JSON.stringify({
         model: MODEL,
-        max_tokens: 1200,
+        max_tokens: 1800,
         stream: true,
         system: buildSystem(mode, lang === "th" ? "th" : "en", images.length > 0),
         messages: [{ role: "user", content }],
