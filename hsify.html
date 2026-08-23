@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HSIFY — HS Code Classifier</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --brand:     #1560BD;
+  --brand-dk:  #0f4a93;
+  --brand-lt:  #2a78da;
+  --brand-bg:  #eaf2fd;
+  --brand-br:  #b9d5f5;
+  --gray:      #4C4A4A;
+  --bg:        #f4f5f7;
+  --white:     #ffffff;
+  --border:    #dde1e7;
+  --border2:   #c8cdd6;
+  --text:      #1a1f2e;
+  --text2:     #4C4A4A;
+  --text3:     #8a9099;
+  --amber:     #d97706;
+  --red:       #dc2626;
+  --green:     #16a34a;
+  --font:      'IBM Plex Sans', sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+  --r:  6px;
+  --rl: 10px;
+  --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg); color: var(--text);
+  font-family: var(--font); font-size: 14px; line-height: 1.6;
+  height: 100vh; overflow: hidden;
+  display: flex; flex-direction: column;
+}
+
+/* ── HEADER ── */
+.header {
+  background: var(--brand);
+  height: 56px; flex-shrink: 0;
+  display: flex; align-items: stretch;
+  padding: 0 2rem; z-index: 100;
+  box-shadow: 0 2px 8px rgba(15,74,147,0.3);
+}
+.header-brand {
+  display: flex; align-items: center;
+  padding-right: 2rem;
+  border-right: 1px solid rgba(255,255,255,0.2);
+  min-width: 200px;
+}
+.brand-name { font-size: 19px; font-weight: 600; color: #fff; letter-spacing: -0.3px; line-height: 1.1; }
+.brand-sub { font-size: 9px; color: rgba(255,255,255,0.6); letter-spacing: 0.5px; text-transform: uppercase; margin-top: 1px; }
+.header-nav { display: flex; align-items: center; padding-left: 1.5rem; flex: 1; }
+.nav-btn {
+  padding: 0 18px; height: 56px;
+  background: none; border: none;
+  border-bottom: 3px solid transparent;
+  color: rgba(255,255,255,0.7);
+  font-family: var(--font); font-size: 13px; letter-spacing: 0.2px;
+  cursor: pointer; transition: color 0.15s, border-color 0.15s;
+  display: flex; align-items: center; white-space: nowrap;
+}
+.nav-btn:hover { color: #fff; }
+.nav-btn.active { color: #fff; border-bottom-color: #fff; font-weight: 500; }
+.header-badges { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.badge { font-size: 10px; padding: 4px 10px; border-radius: 3px; letter-spacing: 0.8px; font-weight: 500; }
+.badge-solid { background: #fff; color: var(--brand); }
+.badge-outline { border: 1px solid rgba(255,255,255,0.4); color: rgba(255,255,255,0.85); }
+
+/* ── LAYOUT ── */
+.layout {
+  flex: 1; min-height: 0;
+  display: grid; grid-template-columns: 420px 1fr;
+  overflow: hidden;
+}
+.panel-left {
+  background: var(--white);
+  border-right: 1px solid var(--border);
+  padding: 1.75rem 1.5rem;
+  display: flex; flex-direction: column; gap: 1.25rem;
+  overflow-y: auto; min-height: 0;
+  box-shadow: 2px 0 8px rgba(0,0,0,0.04);
+}
+.panel-right { padding: 2rem; overflow-y: auto; min-height: 0; }
+.section { display: none; }
+.section.active { display: flex; flex-direction: column; gap: 1.25rem; }
+
+/* ── FOOTER ── */
+.footer {
+  flex-shrink: 0; height: 34px;
+  background: var(--brand-dk);
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 11px; letter-spacing: 0.4px;
+}
+.footer strong { font-weight: 500; }
+
+/* ── PAGE TITLE ── */
+.page-title { font-size: 18px; font-weight: 600; color: var(--brand); line-height: 1.25; }
+.page-sub { font-size: 12.5px; color: var(--text2); margin-top: 6px; }
+
+/* ── FORM ── */
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field-label { font-size: 12px; font-weight: 500; color: var(--brand); text-transform: uppercase; letter-spacing: 0.6px; }
+.field-hint { font-size: 11px; color: var(--text3); text-transform: none; letter-spacing: 0; font-weight: 400; }
+textarea, input[type=text], select {
+  background: #fff; border: 1.5px solid var(--border); border-radius: var(--r);
+  color: var(--text); font-family: var(--font); font-size: 13.5px;
+  padding: 9px 12px; width: 100%; outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+textarea:focus, input[type=text]:focus, select:focus {
+  border-color: var(--brand); box-shadow: 0 0 0 3px rgba(21,96,189,0.12);
+}
+textarea { resize: vertical; min-height: 100px; line-height: 1.65; }
+select { cursor: pointer; }
+input.mono { font-family: var(--font-mono); letter-spacing: 2px; font-size: 15px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+/* ── CHIPS ── */
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+.chip {
+  font-size: 12px; padding: 4px 11px;
+  border: 1.5px solid var(--border2); border-radius: 20px;
+  color: var(--text2); background: none; cursor: pointer;
+  font-family: var(--font); transition: all 0.15s; white-space: nowrap;
+}
+.chip:hover { border-color: var(--brand); color: var(--brand); background: rgba(21,96,189,0.05); }
+
+/* ── IMAGE UPLOAD ── */
+.dropzone {
+  border: 1.5px dashed var(--border2); border-radius: var(--r);
+  padding: 16px 14px; text-align: center; cursor: pointer;
+  background: #fbfcfe; transition: all 0.15s;
+}
+.dropzone:hover, .dropzone.drag { border-color: var(--brand); background: var(--brand-bg); }
+.dropzone.busy { opacity: 0.6; pointer-events: none; }
+.dz-icon { width: 26px; height: 26px; margin: 0 auto 6px; display: block; fill: none; stroke: var(--brand); stroke-width: 1.6; }
+.dz-main { font-size: 13px; color: var(--brand); font-weight: 500; }
+.dz-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.thumbs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.thumb {
+  position: relative; width: 74px; height: 74px;
+  border-radius: var(--r); overflow: hidden;
+  border: 1px solid var(--border); background: #f0f0f0;
+}
+.thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.thumb-x {
+  position: absolute; top: 3px; right: 3px;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: rgba(0,0,0,0.6); color: #fff; border: none;
+  cursor: pointer; font-size: 12px; line-height: 1;
+  display: grid; place-items: center; padding: 0;
+}
+.thumb-x:hover { background: var(--red); }
+.thumb-size {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  background: rgba(0,0,0,0.6); color: #fff;
+  font-size: 9px; text-align: center; padding: 1px 0;
+  font-family: var(--font-mono);
+}
+.upload-note { font-size: 11px; color: var(--text3); margin-top: 6px; }
+.upload-err { font-size: 11.5px; color: var(--red); margin-top: 6px; }
+
+/* ── BUTTONS ── */
+.btn-row { display: flex; gap: 10px; align-items: center; }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 11px 20px; border-radius: var(--r);
+  font-size: 14px; font-family: var(--font);
+  cursor: pointer; border: none; font-weight: 500;
+  transition: all 0.15s; white-space: nowrap; flex: 1;
+}
+.btn-primary { background: var(--brand); color: #fff; }
+.btn-primary:hover { background: var(--brand-lt); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-ghost { background: none; border: 1.5px solid var(--border2); color: var(--text2); flex: 0; padding: 11px 18px; }
+.btn-ghost:hover { border-color: var(--gray); color: var(--text); }
+
+/* ── PLACEHOLDER ── */
+.result-placeholder {
+  height: 100%; min-height: 320px;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 14px;
+}
+.placeholder-icon {
+  width: 64px; height: 64px; background: var(--white);
+  border: 1.5px solid var(--border); border-radius: var(--rl);
+  display: grid; place-items: center; box-shadow: var(--shadow);
+}
+.placeholder-icon svg { width: 28px; height: 28px; fill: none; stroke: var(--border2); stroke-width: 1.5; }
+.placeholder-title { font-size: 14px; color: var(--text2); font-weight: 500; }
+.placeholder-sub { font-size: 12px; color: var(--text3); text-align: center; max-width: 320px; }
+
+/* ── RESULT CARD ── */
+.result-card {
+  background: var(--white); border: 1px solid var(--border);
+  border-radius: var(--rl); box-shadow: var(--shadow-md); overflow: hidden;
+}
+.result-card-header {
+  padding: 14px 20px; background: #f8f9fb;
+  border-bottom: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: flex-start; gap: 16px;
+}
+.result-card-label { font-size: 11px; color: var(--text3); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px; }
+.result-card-product { font-size: 13px; font-weight: 600; color: var(--brand); }
+.result-card-origin { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.result-card-time { font-size: 11px; color: var(--text3); font-family: var(--font-mono); white-space: nowrap; }
+.result-card-body { padding: 20px; }
+
+/* ── MARKDOWN RESULT ── */
+.rs-title {
+  font-size: 13px; font-weight: 600; color: var(--brand);
+  margin: 18px 0 10px; padding-bottom: 6px;
+  border-bottom: 2px solid var(--brand);
+}
+.rs-title:first-child { margin-top: 0; }
+.md-h4 { font-size: 12.5px; font-weight: 600; color: var(--brand-dk); margin: 12px 0 6px; }
+.md-p { font-size: 13px; margin-bottom: 8px; line-height: 1.7; }
+.md-code {
+  background: #dbe8f9; padding: 1px 6px; border-radius: 3px;
+  font-family: var(--font-mono); font-size: 12px; color: var(--brand);
+}
+.md-link { color: var(--brand); }
+.doc-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+.doc-item {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 9px 12px; background: #f8f9fb;
+  border: 1px solid var(--border); border-radius: var(--r); font-size: 13px;
+}
+.doc-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--brand); margin-top: 7px; flex-shrink: 0; }
+.doc-dot.warn { background: var(--amber); }
+.doc-text { color: var(--text); line-height: 1.6; }
+
+/* ── DISCLAIMER / ERROR ── */
+.disclaimer {
+  margin-top: 16px; padding: 10px 14px;
+  background: #fffbeb; border: 1px solid #fcd34d;
+  border-radius: var(--r); font-size: 12px; color: #92400e; line-height: 1.65;
+}
+.error-box {
+  padding: 14px 16px; background: #fef2f2; border: 1px solid #fecaca;
+  border-radius: var(--r); color: #991b1b; font-size: 13px; line-height: 1.7;
+}
+.error-box strong { display: block; margin-bottom: 4px; }
+
+/* ── LOADING ── */
+.loading-wrap {
+  background: var(--white); border: 1px solid var(--border);
+  border-radius: var(--rl); padding: 2rem; box-shadow: var(--shadow);
+  display: flex; flex-direction: column; gap: 12px;
+}
+.loading-title { font-size: 14px; font-weight: 500; color: var(--brand); }
+.loading-sub { font-size: 11px; color: var(--text3); }
+.loading-bar { width: 200px; height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.loading-bar-fill { height: 100%; background: var(--brand); animation: lp 1.4s ease-in-out infinite; }
+@keyframes lp { 0%{width:0;margin-left:0} 50%{width:60%;margin-left:20%} 100%{width:0;margin-left:100%} }
+
+/* ── INFO ── */
+.info-card {
+  background: var(--white); border: 1px solid var(--border);
+  border-radius: var(--rl); overflow: hidden; box-shadow: var(--shadow);
+}
+.info-card-header {
+  background: var(--brand); padding: 11px 16px;
+  font-size: 12px; color: #fff; font-weight: 500;
+  letter-spacing: 0.5px; text-transform: uppercase;
+}
+.info-row {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  padding: 10px 16px; border-bottom: 1px solid var(--border); font-size: 13px;
+}
+.info-row:last-child { border-bottom: none; }
+.info-key { color: var(--text2); }
+.info-val { font-family: var(--font-mono); font-size: 12px; color: var(--brand); font-weight: 500; text-align: right; }
+.ext-link {
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 16px; border-bottom: 1px solid var(--border);
+  text-decoration: none; transition: background 0.12s;
+}
+.ext-link:last-child { border-bottom: none; }
+.ext-link:hover { background: rgba(21,96,189,0.05); }
+.ext-link-arrow { color: var(--brand); font-size: 14px; }
+.ext-link-text { font-size: 13px; color: var(--brand-dk); }
+.quick-links { border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; }
+.quick-links .ext-link { padding: 9px 12px; font-size: 12px; background: #fff; }
+
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+@media (max-width: 860px) {
+  body { height: auto; overflow: visible; }
+  .header { padding: 0 1rem; overflow-x: auto; }
+  .layout { grid-template-columns: 1fr; overflow: visible; }
+  .panel-left, .panel-right { overflow: visible; }
+  .panel-right { padding: 1.25rem; }
+  .result-placeholder { height: auto; padding: 3rem 0; }
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="header-brand">
+    <div>
+      <div class="brand-name">HSIFY</div>
+      <div class="brand-sub">HS Code Intelligence</div>
+    </div>
+  </div>
+  <nav class="header-nav">
+    <button class="nav-btn active" onclick="switchTab(this,'classify')">HS Classification</button>
+    <button class="nav-btn" onclick="switchTab(this,'verify')">Verify HS Code</button>
+    <button class="nav-btn" onclick="switchTab(this,'info')">System Info</button>
+  </nav>
+  <div class="header-badges">
+    <span class="badge badge-solid">CLAUDE AI</span>
+    <span class="badge badge-outline">AHTN 2022</span>
+  </div>
+</header>
+
+<div class="layout">
+
+  <!-- ══ LEFT PANEL ══ -->
+  <div class="panel-left">
+
+    <!-- CLASSIFY -->
+    <div class="section active" id="tab-classify">
+      <div>
+        <div class="page-title">Automated HS Code Classification</div>
+        <div class="page-sub">Describe the goods, attach photos, or both. Analysis follows AHTN 2022 and the General Interpretative Rules.</div>
+      </div>
+
+      <div class="field">
+        <div class="field-label">Product Description <span class="field-hint">optional if images attached</span></div>
+        <textarea id="inp-desc" placeholder="Name, material, standard, dimensions, power rating, intended use, degree of processing..."></textarea>
+        <div class="chips">
+          <button class="chip" onclick="fill('Monocrystalline solar cells 400W, assembled into modules, for electricity generation')">+ Solar Panel</button>
+          <button class="chip" onclick="fill('Seamless line pipe API 5L Gr.X60, 16in SCH40, OD 406.4mm x 12.70mm WT x 6000mm, carbon steel')">+ Steel Pipe</button>
+          <button class="chip" onclick="fill('Frozen boneless beef, vacuum-packed in 25kg bags')">+ Frozen Meat</button>
+          <button class="chip" onclick="fill('Compound feed for swine, pelletised, containing maize, soybean meal and vitamin premix, 25kg bags')">+ Animal Feed</button>
+          <button class="chip" onclick="fill('Electric motor 3-phase 15kW 380V 50Hz IP55 class F insulation')">+ Electric Motor</button>
+        </div>
+      </div>
+
+      <!-- IMAGE UPLOAD -->
+      <div class="field">
+        <div class="field-label">Product Images <span class="field-hint">up to 4</span></div>
+        <div class="dropzone" id="dropzone" onclick="document.getElementById('file-input').click()">
+          <svg class="dz-icon" viewBox="0 0 24 24">
+            <rect x="3" y="5" width="18" height="14" rx="2"/>
+            <circle cx="8.5" cy="10" r="1.5"/>
+            <path d="M21 16l-5-5-4.5 4.5L9 13l-6 6"/>
+          </svg>
+          <div class="dz-main">Click to attach, or drop images here</div>
+          <div class="dz-sub">JPEG · PNG · WebP · HEIC — resized automatically</div>
+        </div>
+        <input type="file" id="file-input" accept="image/*,.heic,.heif" multiple style="display:none;" onchange="handleFiles(this.files); this.value='';">
+        <div class="thumbs" id="thumbs"></div>
+        <div class="upload-note" id="upload-note" style="display:none;"></div>
+        <div class="upload-err" id="upload-err" style="display:none;"></div>
+      </div>
+
+      <div class="grid2">
+        <div class="field">
+          <div class="field-label">Country of Origin</div>
+          <select id="inp-origin">
+            <option value="">-- Not specified / no FTA --</option>
+            <optgroup label="ASEAN (ATIGA — Form D)">
+              <option>Brunei (BN)</option>
+              <option>Cambodia (KH)</option>
+              <option>Indonesia (ID)</option>
+              <option>Laos (LA)</option>
+              <option>Malaysia (MY)</option>
+              <option>Myanmar (MM)</option>
+              <option>Philippines (PH)</option>
+              <option>Singapore (SG)</option>
+              <option>Vietnam (VN)</option>
+            </optgroup>
+            <optgroup label="Bilateral / Plus FTAs">
+              <option>China (CN) — ACFTA</option>
+              <option>Japan (JP) — JTEPA</option>
+              <option>South Korea (KR) — AKFTA</option>
+              <option>India (IN) — AIFTA</option>
+              <option>Australia (AU) — TAFTA / AANZFTA</option>
+              <option>New Zealand (NZ) — TNZCEP / AANZFTA</option>
+              <option>Peru (PE) — TPKFTA</option>
+              <option>Chile (CL) — THCFTA</option>
+            </optgroup>
+            <optgroup label="No FTA (MFN rate applies)">
+              <option>United States (US)</option>
+              <option>Germany (DE)</option>
+              <option>United Kingdom (GB)</option>
+              <option>Taiwan (TW)</option>
+              <option>Italy (IT)</option>
+              <option>Netherlands (NL)</option>
+              <option>France (FR)</option>
+              <option>Other (no FTA)</option>
+            </optgroup>
+          </select>
+        </div>
+        <div class="field">
+          <div class="field-label">Purpose</div>
+          <select id="inp-purpose">
+            <option value="">-- Select --</option>
+            <option>Commercial / Resale</option>
+            <option>Manufacturing</option>
+            <option>Internal Company Use</option>
+            <option>Personal Import</option>
+            <option>Research &amp; Development</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="field-label">Additional Details</div>
+        <input type="text" id="inp-extra" placeholder="Material, standard, dimensions, weight">
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-primary" id="btn-classify" onclick="runClassify()">Run Analysis</button>
+        <button class="btn btn-ghost" onclick="clearAll()">Clear</button>
+      </div>
+
+      <div class="disclaimer">
+        <strong>⚠ Note:</strong> Results are preliminary reference only and do not constitute a legal ruling. Verify with the Thai Customs ITD system and a licensed customs broker before importation.
+      </div>
+
+      <div>
+        <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px;">Quick Links · ITD</div>
+        <div class="quick-links">
+          <a class="ext-link" href="http://itd.customs.go.th/igtf/viewerImportTariff.do?param=main" target="_blank"><span class="ext-link-arrow">→</span><span class="ext-link-text">Import Tariff &amp; Duty Rate</span></a>
+          <a class="ext-link" href="http://itd.customs.go.th/igtf/ViewerPrivilege.do?param=main" target="_blank"><span class="ext-link-arrow">→</span><span class="ext-link-text">FTA Tax Privileges</span></a>
+          <a class="ext-link" href="http://itd.customs.go.th/igtf/viewerExemTariff.do?param=main" target="_blank"><span class="ext-link-arrow">→</span><span class="ext-link-text">Duty Exemptions — Section 4</span></a>
+          <a class="ext-link" href="http://itd.customs.go.th/igtf/notice.do?param=main" target="_blank"><span class="ext-link-arrow">→</span><span class="ext-link-text">MOF Notifications</span></a>
+        </div>
+      </div>
+    </div>
+
+    <!-- VERIFY -->
+    <div class="section" id="tab-verify">
+      <div>
+        <div class="page-title">HS Code Verification</div>
+        <div class="page-sub">Enter an existing code to test it against your product description.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">HS Code <span class="field-hint">4, 6 or 8 digits</span></div>
+        <input type="text" id="inp-hs" class="mono" placeholder="e.g. 7304.19.90" maxlength="14">
+      </div>
+      <div class="field">
+        <div class="field-label">Product Description</div>
+        <textarea id="inp-vdesc" style="min-height:85px;" placeholder="Describe the product to verify against the code above"></textarea>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="btn-verify" onclick="runVerify()">Run Verification</button>
+        <button class="btn btn-ghost" onclick="clearVerify()">Clear</button>
+      </div>
+    </div>
+
+    <!-- INFO -->
+    <div class="section" id="tab-info">
+      <div>
+        <div class="page-title">System Information</div>
+        <div class="page-sub">Reference sources and legal basis used by this system.</div>
+      </div>
+      <div class="info-card">
+        <div class="info-card-header">Legal &amp; System Reference</div>
+        <div class="info-row"><div class="info-key">Database</div><div class="info-val">ITD Thai Customs</div></div>
+        <div class="info-row"><div class="info-key">Nomenclature</div><div class="info-val">AHTN 2022 · 8 digits</div></div>
+        <div class="info-row"><div class="info-key">Primary Legislation</div><div class="info-val">Tariff Decree No.7, B.E. 2564</div></div>
+        <div class="info-row"><div class="info-key">In Force From</div><div class="info-val">01 Jan 2022</div></div>
+        <div class="info-row"><div class="info-key">Interpretation</div><div class="info-val">GIR 1–6</div></div>
+        <div class="info-row"><div class="info-key">AI Engine</div><div class="info-val">Claude Sonnet</div></div>
+      </div>
+      <div class="info-card">
+        <div class="info-card-header">Thai Customs Official Links</div>
+        <a class="ext-link" href="http://itd.customs.go.th/igtf/viewerImportTariff.do?param=main" target="_blank"><span class="ext-link-arrow">→</span><span class="ext-link-text">Import Tariff Search</span></a>
+        <a class="ext-link" href="http://itd.customs.go.th/igtf/viewerExportTariff.do?param=main" target="_blank"><span class="ext-link-arrow">→</span><span class="ext-link-text">Export Tariff Search</span></a>
+        <a class="ext-link" href="http://itd.customs.go.th/igtf/decree.do?param=main" target="_blank"><span class="ext-link-arrow">→</span><span class="ext-link-text">Royal Decrees &amp; Acts</span></a>
+        <a class="ext-link" href="http://itd.customs.go.th/igtf/notice.do?param=main" target="_blank"><span class="ext-link-arrow">→</span><span class="ext-link-text">MOF Notifications</span></a>
+        <a class="ext-link" href="http://itd.customs.go.th/igtf/ViewerPrivilege.do?param=main" target="_blank"><span class="ext-link-arrow">→</span><span class="ext-link-text">FTA Privileges</span></a>
+        <a class="ext-link" href="http://itd.customs.go.th/igtf/viewerExemTariff.do?param=main" target="_blank"><span class="ext-link-arrow">→</span><span class="ext-link-text">Duty Exemptions — Section 4</span></a>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══ RIGHT PANEL ══ -->
+  <div class="panel-right" id="right-panel">
+    <div class="result-placeholder" id="placeholder">
+      <div class="placeholder-icon">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="0.5"/><rect x="14" y="3" width="7" height="7" rx="0.5"/><rect x="3" y="14" width="7" height="7" rx="0.5"/><rect x="14" y="14" width="7" height="7" rx="0.5"/></svg>
+      </div>
+      <div class="placeholder-title">No analysis yet</div>
+      <div class="placeholder-sub">Describe the goods or attach a photo, then click Run Analysis</div>
+    </div>
+    <div id="result-area" style="display:none;"></div>
+  </div>
+
+</div>
+
+<!-- FOOTER -->
+<footer class="footer">Powered by&nbsp;<strong>Manuport Logistics (Thailand) Co.,Ltd</strong></footer>
+
+<script>
+/* ══════════════ CONFIG ══════════════ */
+const API_URL     = '/.netlify/functions/analyze';
+const MAX_IMAGES  = 4;
+const MAX_EDGE    = 1568;        // Claude's optimal long edge — larger is downscaled server-side anyway
+const TARGET_BYTES = 900 * 1024; // per image, after compression
+const HEIC_CDN    = 'https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js';
+
+let attached = [];   // { id, dataUrl, data, media_type, bytes }
+
+/* ══════════════ TABS & FORM ══════════════ */
+function switchTab(btn, name) {
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+}
+function fill(t) { document.getElementById('inp-desc').value = t; }
+
+function resetResult() {
+  document.getElementById('placeholder').style.display = 'flex';
+  document.getElementById('result-area').style.display = 'none';
+  document.getElementById('result-area').innerHTML = '';
+}
+function clearAll() {
+  ['inp-desc','inp-extra','inp-origin','inp-purpose'].forEach(id => document.getElementById(id).value = '');
+  attached = [];
+  renderThumbs();
+  showErr('');
+  resetResult();
+}
+function clearVerify() {
+  ['inp-hs','inp-vdesc'].forEach(id => document.getElementById(id).value = '');
+  resetResult();
+}
+
+/* ══════════════ IMAGE HANDLING ══════════════ */
+const dz = document.getElementById('dropzone');
+['dragenter','dragover'].forEach(e => dz.addEventListener(e, ev => {
+  ev.preventDefault(); dz.classList.add('drag');
+}));
+['dragleave','drop'].forEach(e => dz.addEventListener(e, ev => {
+  ev.preventDefault(); dz.classList.remove('drag');
+}));
+dz.addEventListener('drop', ev => {
+  if (ev.dataTransfer && ev.dataTransfer.files) handleFiles(ev.dataTransfer.files);
+});
+
+function showErr(msg) {
+  const el = document.getElementById('upload-err');
+  el.textContent = msg || '';
+  el.style.display = msg ? 'block' : 'none';
+}
+
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = src;
+    s.onload = resolve;
+    s.onerror = () => reject(new Error('Could not load the HEIC converter — check your connection'));
+    document.head.appendChild(s);
+  });
+}
+
+function isHeic(file) {
+  return /hei[cf]/i.test(file.type || '') || /\.hei[cf]$/i.test(file.name || '');
+}
+
+async function heicToJpegBlob(file) {
+  if (!window.heic2any) await loadScript(HEIC_CDN);
+  const out = await window.heic2any({ blob: file, toType: 'image/jpeg', quality: 0.85 });
+  return Array.isArray(out) ? out[0] : out;
+}
+
+/* decode a File/Blob into something drawable */
+function decodeBlob(blob) {
+  if (typeof createImageBitmap === 'function') {
+    return createImageBitmap(blob);
+  }
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('decode failed')); };
+    img.src = url;
+  });
+}
+
+async function toDrawable(file) {
+  if (isHeic(file)) {
+    try { return await decodeBlob(file); }             // Safari can decode HEIC natively
+    catch { return await decodeBlob(await heicToJpegBlob(file)); }
+  }
+  try { return await decodeBlob(file); }
+  catch { throw new Error(`"${file.name}" could not be read — try converting it to JPEG`); }
+}
+
+function compress(src) {
+  const sw = src.width, sh = src.height;
+  if (!sw || !sh) throw new Error('Image has no dimensions');
+  const scale = Math.min(1, MAX_EDGE / Math.max(sw, sh));
+  const w = Math.max(1, Math.round(sw * scale));
+  const h = Math.max(1, Math.round(sh * scale));
+
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, w, h);           // flatten transparency so JPEG doesn't go black
+  ctx.drawImage(src, 0, 0, w, h);
+
+  let q = 0.82;
+  let url = c.toDataURL('image/jpeg', q);
+  while (url.length * 0.75 > TARGET_BYTES && q > 0.4) {
+    q -= 0.1;
+    url = c.toDataURL('image/jpeg', q);
+  }
+  if (src.close) src.close();
+  return { dataUrl: url, bytes: Math.round(url.length * 0.75) };
+}
+
+async function handleFiles(fileList) {
+  const files = Array.from(fileList || []);
+  if (!files.length) return;
+  showErr('');
+  dz.classList.add('busy');
+
+  const problems = [];
+  for (const file of files) {
+    if (attached.length >= MAX_IMAGES) { problems.push(`Maximum ${MAX_IMAGES} images — some were skipped`); break; }
+    if (!/^image\//.test(file.type || '') && !isHeic(file)) { problems.push(`"${file.name}" is not an image`); continue; }
+    try {
+      const drawable = await toDrawable(file);
+      const { dataUrl, bytes } = compress(drawable);
+      attached.push({
+        id: 'img_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+        dataUrl,
+        data: dataUrl.split(',')[1],
+        media_type: 'image/jpeg',
+        bytes
+      });
+      renderThumbs();
+    } catch (e) {
+      problems.push(e.message || `"${file.name}" could not be processed`);
+    }
+  }
+
+  dz.classList.remove('busy');
+  if (problems.length) showErr(problems.join(' · '));
+}
+
+function removeImage(id) {
+  attached = attached.filter(i => i.id !== id);
+  renderThumbs();
+  showErr('');
+}
+
+function renderThumbs() {
+  const wrap = document.getElementById('thumbs');
+  const note = document.getElementById('upload-note');
+  wrap.innerHTML = attached.map(i => `
+    <div class="thumb">
+      <img src="${i.dataUrl}" alt="attached image">
+      <button class="thumb-x" onclick="removeImage('${i.id}')" title="Remove">×</button>
+      <div class="thumb-size">${(i.bytes / 1024).toFixed(0)} KB</div>
+    </div>`).join('');
+
+  if (attached.length) {
+    const total = attached.reduce((s, i) => s + i.bytes, 0);
+    note.textContent = `${attached.length} of ${MAX_IMAGES} attached · ${(total / 1024).toFixed(0)} KB total`;
+    note.style.display = 'block';
+  } else {
+    note.style.display = 'none';
+  }
+}
+
+/* ══════════════ API ══════════════ */
+async function callAPI(payload) {
+  let res;
+  try {
+    res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+  } catch {
+    throw new Error('Could not reach the analysis service — check your connection and try again.');
+  }
+
+  if (res.status === 413) throw new Error('The attached images are too large. Remove one and try again.');
+  if (res.status === 502 || res.status === 504) throw new Error('The analysis timed out. Try fewer images or a shorter description.');
+
+  const text = await res.text();
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    console.error('Non-JSON response:', text.slice(0, 300));
+    throw new Error(`The service returned an unexpected response (HTTP ${res.status}). Check the Netlify function logs.`);
+  }
+  if (!res.ok) throw new Error(data.error || `Request failed (HTTP ${res.status})`);
+  if (!data.result) throw new Error('No result was returned — please try again.');
+  return data;
+}
+
+/* ══════════════ MARKDOWN → HTML ══════════════ */
+function parseMarkdown(md) {
+  const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const inline = s => esc(s)
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/`([^`]+)`/g, '<code class="md-code">$1</code>')
+    .replace(/\[(.+?)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener" class="md-link">$1</a>')
+    .replace(/(^|[\s(])(https?:\/\/[^\s<)]+)/g, '$1<a href="$2" target="_blank" rel="noopener" class="md-link">$2</a>');
+
+  const out = [];
+  let list = [];
+  const flush = () => {
+    if (list.length) { out.push('<div class="doc-list">' + list.join('') + '</div>'); list = []; }
+  };
+  const bullet = t => {
+    const warn = /⚠|❌|anti-?dump|safeguard|restrict|prohibit|licen[cs]e required|permit required/i.test(t);
+    list.push(`<div class="doc-item"><div class="doc-dot${warn ? ' warn' : ''}"></div><div class="doc-text">${inline(t)}</div></div>`);
+  };
+
+  for (const raw of String(md).split('\n')) {
+    const line = raw.trim();
+    if (!line) { flush(); continue; }
+    let m;
+    if ((m = line.match(/^#{3,}\s+(.*)/)))      { flush(); out.push(`<h4 class="md-h4">${inline(m[1])}</h4>`); }
+    else if ((m = line.match(/^#{1,2}\s+(.*)/))) { flush(); out.push(`<div class="rs-title">${inline(m[1])}</div>`); }
+    else if ((m = line.match(/^[-*•]\s+(.*)/)))  { bullet(m[1]); }
+    else if ((m = line.match(/^\d+[.)]\s+(.*)/))){ bullet(m[1]); }
+    else if (/^\|/.test(line)) {
+      if (/^\|[\s|:-]+\|?$/.test(line)) continue;   // markdown table separator row
+      flush();
+      out.push(`<p class="md-p">${inline(line.replace(/^\||\|$/g, '').split('|').map(c => c.trim()).filter(Boolean).join(' · '))}</p>`);
+    }
+    else { flush(); out.push(`<p class="md-p">${inline(line)}</p>`); }
+  }
+  flush();
+  return out.join('');
+}
+
+/* ══════════════ RENDER ══════════════ */
+function showLoading(msg, sub) {
+  document.getElementById('placeholder').style.display = 'none';
+  const area = document.getElementById('result-area');
+  area.style.display = 'block';
+  area.innerHTML = `
+    <div class="loading-wrap">
+      <div>
+        <div class="loading-title">${msg}</div>
+        <div class="loading-sub">${sub}</div>
+      </div>
+      <div class="loading-bar"><div class="loading-bar-fill"></div></div>
+    </div>`;
+}
+
+function showError(msg) {
+  document.getElementById('placeholder').style.display = 'none';
+  const area = document.getElementById('result-area');
+  area.style.display = 'block';
+  area.innerHTML = `
+    <div class="result-card"><div class="result-card-body">
+      <div class="error-box"><strong>Analysis failed</strong>${msg}</div>
+    </div></div>`;
+}
+
+function showResult(label, data, subject, origin, imageCount) {
+  const time = new Date().toLocaleString('en-GB', {
+    hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short', year: '2-digit'
+  });
+  const truncated = data.meta && data.meta.truncated
+    ? `<div class="disclaimer" style="background:#fef2f2;border-color:#fecaca;color:#991b1b;">The response was cut off before completing every section. Shorten the description or reduce the number of images.</div>`
+    : '';
+
+  document.getElementById('placeholder').style.display = 'none';
+  const area = document.getElementById('result-area');
+  area.style.display = 'block';
+  area.innerHTML = `
+  <div class="result-card">
+    <div class="result-card-header">
+      <div>
+        <div class="result-card-label">${label}</div>
+        <div class="result-card-product">${subject.slice(0, 70)}${subject.length > 70 ? '…' : ''}</div>
+        ${origin ? `<div class="result-card-origin">Origin: ${origin}</div>` : ''}
+        ${imageCount ? `<div class="result-card-origin">${imageCount} image${imageCount > 1 ? 's' : ''} analysed</div>` : ''}
+      </div>
+      <div class="result-card-time">${time}</div>
+    </div>
+    <div class="result-card-body">
+      ${parseMarkdown(data.result)}
+      ${truncated}
+      <div class="disclaimer">
+        <strong>⚠ Note:</strong> AI-generated analysis under AHTN 2022 (Tariff Decree No.7, B.E. 2564, in force 1 Jan 2022). Preliminary reference only — always confirm on the
+        <a href="http://itd.customs.go.th/igtf/viewerImportTariff.do?param=main" target="_blank" style="color:var(--amber);">Thai Customs ITD system</a>
+        and with a licensed customs broker.
+      </div>
+    </div>
+  </div>`;
+  area.scrollTop = 0;
+}
+
+/* ══════════════ ACTIONS ══════════════ */
+async function runClassify() {
+  const desc    = document.getElementById('inp-desc').value.trim();
+  const origin  = document.getElementById('inp-origin').value;
+  const purpose = document.getElementById('inp-purpose').value;
+  const extra   = document.getElementById('inp-extra').value.trim();
+
+  if (!desc && attached.length === 0) {
+    showErr('Enter a product description or attach at least one image.');
+    document.getElementById('inp-desc').focus();
+    return;
+  }
+  showErr('');
+
+  const btn = document.getElementById('btn-classify');
+  btn.disabled = true;
+  btn.textContent = 'Analysing…';
+  showLoading(
+    attached.length ? 'Analysing images and product details…' : 'Analysing HS Code classification…',
+    'Applying GIR 1–6 against AHTN 2022 — this can take up to 30 seconds'
+  );
+
+  try {
+    const data = await callAPI({
+      mode: 'classify',
+      description: desc,
+      origin, purpose, extra,
+      images: attached.map(i => ({ media_type: i.media_type, data: i.data }))
+    });
+    showResult('CLASSIFICATION REPORT', data, desc || 'Image-based classification', origin, attached.length);
+  } catch (e) {
+    showError(e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Run Analysis';
+  }
+}
+
+async function runVerify() {
+  const hs   = document.getElementById('inp-hs').value.trim();
+  const desc = document.getElementById('inp-vdesc').value.trim();
+  if (!hs || !desc) { alert('Enter both an HS code and a product description.'); return; }
+
+  const btn = document.getElementById('btn-verify');
+  btn.disabled = true;
+  btn.textContent = 'Verifying…';
+  showLoading('Verifying HS Code…', 'Testing the code against the heading text and Chapter Notes');
+
+  try {
+    const data = await callAPI({ mode: 'verify', hsCode: hs, description: desc });
+    showResult('VERIFICATION REPORT', data, `${hs} — ${desc}`, '', 0);
+  } catch (e) {
+    showError(e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Run Verification';
+  }
+}
+</script>
+</body>
+</html>
