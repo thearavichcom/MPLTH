@@ -23,3 +23,11 @@
   from = "/dgify"
   to = "/dgify.html"
   status = 200
+[[redirects]]
+  from = "/hsify"
+  to = "/hsify.html"
+  status = 200
+[[redirects]]
+  from = "/dgify"
+  to = "/dgify.html"
+  status = 200
