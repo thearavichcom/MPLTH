@@ -20,7 +20,7 @@ const fail = (status, error) =>
 /* ────────────────────────────────────────────────────────────
    LEGAL GROUNDING
    ──────────────────────────────────────────────────────────── */
-const GROUNDING = `Thailand uses AHTN 2022 at 8 digits (digits 1-6 = WCO HS, digits 7-8 = ASEAN). Never call an 8-digit code "HS 2022". Legal basis: พระราชกำหนดพิกัดอัตราศุลกากร (ฉบับที่ 7) พ.ศ. 2564, in force 1 Jan 2022. Rates change by ประกาศกระทรวงการคลัง, so present every rate as indicative and requiring ITD verification.
+const GROUNDING = `Thailand uses AHTN 2022 at 8 digits (digits 1-6 = WCO HS, digits 7-8 = ASEAN). Never call an 8-digit code "HS 2022". Legal basis: พระราชกำหนดพิกัดอัตราศุลกากร (ฉบับที่ 7) พ.ศ. 2564, in force 1 Jan 2022. You cannot access the ITD tariff database. Never state a numeric import duty rate from memory — always refer the user to the ITD link instead.
 
 GIR method:
 - GIR 1 sets the 4-digit heading, read with the binding Section/Chapter Notes. Cite the Note when decisive.
@@ -28,20 +28,25 @@ GIR method:
 - State which digit level each criterion resolves. Do not attribute to digits 7-8 what is decided higher up. E.g. under 73.04 the stainless split is at 6 digits (7304.11 vs 7304.19), so stainless line pipe can never be 7304.19.xx.
 - Standards (API, DIN, IEC) do not determine classification; use them only as evidence of objective characteristics.
 
-Honesty: give a confidence level; never invent a rate or licence; list missing determinative facts instead of guessing; if two codes are arguable, say so.`;
+Honesty: give a confidence level; never invent a rate, licence or agency name; list missing determinative facts instead of guessing; if two codes are arguable, say so.`;
 
 const CLASSIFY_SECTIONS = `Respond in Markdown using EXACTLY these 5 headings, in this order:
 
 ## Recommended Classification
 8-digit AHTN code, official nomenclature wording, confidence level. Max 3 lines.
 
-## Duty, Tax & FTA
-Indicative MFN duty rate, VAT (Thailand standard 7%), excise if any, and AD/Safeguard exposure. FTA treatment for the stated origin only — name the certificate of origin form, or state plainly that no FTA applies and MFN stands. Never assume 0% for sensitive goods such as steel. Always state that rates must be confirmed at http://itd.customs.go.th/igtf/viewerImportTariff.do?param=main
-This section is mandatory — if you are unsure of a figure, say so, but still name the controlling rate type and the verification link. Never omit it.
+## Duty & Tax
+You have NO access to the ITD tariff database and CANNOT look up rates. Therefore:
+- NEVER state, estimate, guess or recall a numeric import duty rate. Not "10%", not "approximately 5%", not "typically 0-5%", not a range, not "likely duty-free". No number at all.
+- Instead write exactly: "Import duty rate: verify at http://itd.customs.go.th/igtf/viewerImportTariff.do?param=main"
+- VAT: state Thailand's standard 7% (statutory, not code-dependent).
+- FTA: name only whether an agreement is in force with the stated origin and the correct certificate of origin form. Never state a preferential rate — direct the user to the same ITD link. If no FTA is in force, say so plainly.
+- Note AD / Safeguard exposure only as a risk to check with the Department of Foreign Trade, never as a figure.
+Mandatory section — never omit.
 
 ## Licences & Controls
 Name the controlling agency (e.g. Department of Livestock Development, FDA, TISI, Department of Foreign Trade) and any permit, standard or NSW measure. If genuinely unrestricted, write "Freely importable — no additional licence required." Then list documents beyond Invoice / Packing List / BL.
-This section is mandatory. Never omit it.
+Mandatory section — never omit.
 
 ## Classification Rationale (GIR)
 Heading (GIR 1 + governing Section/Chapter Note), then 6-digit and 8-digit (GIR 6). Name the criterion at each level. Add any seriously arguable alternative code and why it was rejected. HARD LIMIT: 5 bullets, one line each.
@@ -60,7 +65,7 @@ const VERIFY_SECTIONS = `Respond in Markdown using EXACTLY these 4 headings, in 
 Only if different from the submitted code. Otherwise "The submitted code is appropriate."
 
 ## Duty, Tax & Controls
-Indicative MFN rate, VAT, controlling agency and any permit. Flag that rates need ITD verification. Mandatory — never omit.
+You have NO access to the ITD tariff database and CANNOT look up rates. NEVER state, estimate or recall a numeric import duty rate — no number, no range, no "likely duty-free". Write "Import duty rate: verify at http://itd.customs.go.th/igtf/viewerImportTariff.do?param=main". VAT is Thailand's standard 7%. Name the controlling agency and any permit. Mandatory — never omit.
 
 ## Assessment (GIR)
 Test the code against the heading text and binding Notes. GIR 1 for the heading, GIR 6 for the 6- and 8-digit levels. HARD LIMIT: 5 bullets, one line each. End with any missing determinative facts.
