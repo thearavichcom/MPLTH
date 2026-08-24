@@ -2447,11 +2447,20 @@ function orgUsersChildren(pid){return pid?USERS_DATA.filter(u=>u.reports_to===pi
 function orgUserCard(u,seen){seen=seen||new Set();if(u.id&&seen.has(u.id))return '';if(u.id)seen.add(u.id);const kids=orgUsersChildren(u.id).filter(k=>!k.id||!seen.has(k.id));const set=isOwner()?`<button class="icon-btn" title="Set who this person reports to" onclick="orgSetManager('${u.id}')">${mi('pencil',14)}</button>`:'';
   return `<li><div class="onode"><div class="op">${esc(u.title||'—')}</div><div class="onm">${esc(fullName(u))} ${set}</div><div class="oc">${mi('phone',13)}${esc(u.tel||'—')}</div><div class="oc">${mi('mail',13)}${esc(u.email||'—')}</div></div>${kids.length?`<ul>${kids.map(k=>orgUserCard(k,seen)).join('')}</ul>`:''}</li>`;}
 function viewOrgChart(){
-  orgEnsureIds(ORG);
+  /* v7.5 — the chart is now drawn from app_users, so a person exists once:
+     added in Settings, they appear here with their real title, phone and
+     email. Only the reporting line is set here. */
   const own=isOwner();
-  const note=own?'Add a person with position, name, phone and email — solid lines are the primary manager; a dotted line marks a secondary report (set it from a card\'s Edit). Use the icons on any card to edit or remove.':'The company reporting chart. Dotted lines mark secondary reporting relationships.';
-  const add=own?`<button class="btn-primary btn" onclick="addOrgPerson()">${mi('plus',16)}Add person</button>`:'';
-  return `<div class="mod-intro"><div class="row-between"><p>${note}</p>${add}</div></div><div class="treewrap"><div class="tree"><ul>${orgNode(ORG,'')}</ul></div></div>`;
+  const note=own?'Everyone added in Settings \u00b7 Users appears here automatically. Use the pencil on a card to set who that person reports to.':'The company reporting chart, built from the staff directory.';
+  const add=own?`<button class="btn" onclick="navGo('settings');setSettingsSub('users')">${mi('users',16)}Manage staff</button>`:'';
+  const intro=`<div class="mod-intro"><div class="row-between"><p>${note}</p>${add}</div></div>`;
+  if(!USERS_DATA.length)return intro+`<div style="padding:26px 4px;font-size:13px;color:var(--faint)">No staff yet \u2014 add someone in Settings \u00b7 Users and they will show up here.</div>`;
+  const seen=new Set();
+  let nodes=orgUsersRoots().map(u=>orgUserCard(u,seen)).join('');
+  /* a reporting loop would otherwise hide everyone inside it */
+  const stranded=USERS_DATA.filter(u=>!seen.has(u.id));
+  if(stranded.length)nodes+=stranded.map(u=>orgUserCard(u,seen)).join('');
+  return intro+`<div class="treewrap"><div class="tree"><ul>${nodes}</ul></div></div>`;
 }
 function orgSetManager(uid){if(!isOwner())return;const u=USERS_DATA.find(x=>x.id===uid);if(!u)return;
   const others=USERS_DATA.filter(x=>x.id!==uid);
@@ -5163,12 +5172,14 @@ function setSettingsSub(k){settingsSub=k;go('settings');}
 function viewSettingsUsers(){
   const rows=USERS_DATA.map((u,i)=>{
     const own=u.access==='Owner';const age=ageFrom(u.dob);
-    return `<div class="user-row" style="cursor:pointer" onclick="viewUserProfile(${i})">${avatarHTML(u)}<div class="un"><div class="n">${esc(fullName(u))}${age!==''?` <span style="color:var(--faint);font-weight:400">· ${age}</span>`:''}</div><div class="t">${esc(u.title)} · ${esc(u.dept)}</div></div><div class="uc">${esc(u.email)}</div><div class="uc">${esc(u.tel)}</div><span class="lvl-chip">${esc(u.level||u.access)}</span>${own?'<span style="width:19px"></span>':`<button class="icon-btn" title="Delete" onclick="event.stopPropagation();delUser(${i})"><i class="ti ti-trash"></i></button>`}</div>`;}).join('');
+    return `<div class="user-row" style="cursor:pointer" onclick="viewUserProfile(${i})">${avatarHTML(u)}<div class="un"><div class="n">${esc(fullName(u))}${age!==''?` <span style="color:var(--faint);font-weight:400">· ${age}</span>`:''}</div><div class="t">${esc(u.title)} · ${esc(u.dept)}</div></div><div class="uc">${esc(u.email)}</div><div class="uc">${esc(u.tel)}</div><span class="lvl-chip">${esc(u.level||u.access)}</span><button class="icon-btn" title="Edit" onclick="event.stopPropagation();openUserEdit(${i})">${mi('pencil',16)}</button>${own?'<span style="width:19px"></span>':`<button class="icon-btn" title="Delete" onclick="event.stopPropagation();delUser(${i})"><i class="ti ti-trash"></i></button>`}</div>`;}).join('');
   return `<div class="mod-intro"><div class="row-between"><p>Adding someone here creates their sign-in account <b>and</b> their staff profile, which appears in People · Employee Profile. Every field is required except Certificates.</p><button class="btn-primary btn" onclick="openUserModal()"><i class="ti ti-user-plus"></i>Add staff member</button></div></div><div style="border-top:1px solid var(--line);margin-top:14px">${rows}</div>`;
 }
 
 /* --- add-staff modal ------------------------------------------------ */
 let _userPhoto='';
+const MANAGE_USER_FN='Manage_user';
+let _editUserId=null;
 function openUserModal(){
   resetModalShell();modalSave=null;modalFields=[];_userPhoto='';
   document.getElementById('modalTitle').textContent='Add staff member';
@@ -5204,6 +5215,76 @@ function openUserModal(){
   document.getElementById('modalOv').classList.add('show');
   document.getElementById('u_first').focus();showAccess();
 }
+function openUserEdit(i){
+  const u=USERS_DATA[i];if(!u)return;
+  if(!isOwner())return toast('Only the GM or COM can edit staff',true);
+  _editUserId=u.id;_userPhoto='';
+  resetModalShell();modalSave=null;modalFields=[];
+  document.getElementById('modalTitle').textContent='Edit '+fullName(u);
+  document.querySelector('#modalOv .modal').classList.add('wide');
+  const dash=v=>(v==='—'||v==null)?'':v;
+  const V=v=>esc(String(dash(v)??''));
+  const F=(id,label,type,val,full,opt)=>`<div class="ff${full?' full':''}"><label class="${opt?'':'req'}">${label}</label><input id="${id}" type="${type||'text'}" value="${V(val)}"${id==='u_dob'?' onchange="showAge()"':''}></div>`;
+  const T=(id,label,val,opt)=>`<div class="ff full"><label class="${opt?'':'req'}">${label}</label><textarea id="${id}">${V(val)}</textarea></div>`;
+  const lvl=u.level||accessLevelFallback(u);
+  document.getElementById('modalBody').innerHTML=`<div class="uform">
+    <div class="photo-pick"><div class="photo-prev" id="up_prev"${u.photo?` style="background-image:url('${esc(u.photo)}')"`:''}>${u.photo?'':'<i class="ti ti-user"></i>'}</div>
+      <div style="flex:1"><label style="font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">Profile photo</label>
+      <input type="file" id="u_photo" accept="image/*" onchange="onPhotoPick(this)" style="font-size:12px">
+      <div class="hint">Leave empty to keep the current photo.</div></div></div>
+    ${F('u_first','Name','text',u.first)}
+    ${F('u_last','Last name','text',u.last)}
+    ${F('u_dept','Department','text',u.dept)}
+    ${F('u_title','Title','text',u.title)}
+    ${F('u_tel','Phone number','text',u.tel)}
+    <div class="ff"><label>Email</label><input id="u_email_ro" value="${V(u.email)}" disabled><div class="hint">Sign-in email cannot be changed here.</div></div>
+    ${F('u_dob','Date of birth','date',u.dob,false,true)}
+    <div class="ff"><label>Age</label><input id="u_age" disabled value="${V(ageFrom(u.dob))}"></div>
+    ${F('u_idnum','ID number','text',u.idnum,false,true)}
+    ${F('u_years','Years of experience','number',u.years,false,true)}
+    ${F('u_start','Date of start working','date',u.start,false,true)}
+    <div class="ff"><label class="req">Level</label><select id="u_level" onchange="showAccess()">${USER_LEVELS.map(l=>`<option${l===lvl?' selected':''}>${esc(l)}</option>`).join('')}</select><div class="hint" id="u_acc_hint">Workspace access: ${esc(accessFromLevel(lvl))}</div></div>
+    ${F('u_emerg','Emergency contact','text',u.emergency,true,true)}
+    ${F('u_prev','Previous workplace','text',u.prev,true,true)}
+    ${T('u_addr','Address',u.address,true)}
+    ${T('u_edu','Education',u.education,true)}
+    ${T('u_cert','Certificates',u.certs,true)}
+    ${T('u_skill','Skills',u.skills,true)}
+  </div>`;
+  const b=document.querySelector('#modalOv .modal-f .btn-primary');
+  b.setAttribute('onclick','saveUserEdit()');b.innerHTML='Save changes';
+  document.getElementById('modalOv').classList.add('show');
+  document.getElementById('u_first').focus();
+}
+function accessLevelFallback(u){return u.access==='Owner'?'GM':(u.access==='Viewer'?'Viewer':'Staff');}
+async function saveUserEdit(){
+  if(!_editUserId)return;
+  if(!isOwner())return toast('Only the GM or COM can edit staff',true);
+  const g=id=>{const e=document.getElementById(id);return e?(e.value||'').trim():'';};
+  const first=g('u_first');
+  if(!first){document.getElementById('u_first').focus();return toast('Name is required',true);}
+  const level=g('u_level'),access=accessFromLevel(level);
+  const u=USERS_DATA.find(x=>x.id===_editUserId);
+  /* never let the last Owner demote themselves out of the workspace */
+  if(u&&u.access==='Owner'&&access!=='Owner'){
+    const others=USERS_DATA.filter(x=>x.id!==_editUserId&&x.access==='Owner').length;
+    if(!others)return toast('At least one Owner must remain, or nobody can manage users',true);}
+  const btn=document.querySelector('#modalOv .modal-f .btn-primary');
+  if(btn){btn.disabled=true;btn.textContent='Saving…';}
+  const patch={first_name:first,last_name:g('u_last'),department:g('u_dept'),title:g('u_title'),
+    phone:g('u_tel')||null,level,access,dob:g('u_dob')||null,id_number:g('u_idnum')||null,
+    address:g('u_addr')||null,years_experience:_num(g('u_years')),emergency_contact:g('u_emerg')||null,
+    previous_workplace:g('u_prev')||null,start_date:g('u_start')||null,education:g('u_edu')||null,
+    certificates:g('u_cert')||null,skills:g('u_skill')||null};
+  if(_userPhoto)patch.photo_url=_userPhoto;
+  const row=await dbUpdate('users',_editUserId,patch);
+  if(!row){if(btn){btn.disabled=false;btn.textContent='Save changes';}return;}
+  const i=USERS_DATA.findIndex(x=>x.id===_editUserId);
+  if(i>=0)USERS_DATA[i]=row;
+  if(row.auth_id===MY.uid){MY.name=fullName(row);MY.title=row.title||'';MY.access=row.access||'Staff';MY.level=row.level||'';}
+  _editUserId=null;_userPhoto='';closeModal();go('settings');
+  toast('Staff profile updated');
+}
 function showAge(){const el=document.getElementById('u_age');if(el)el.value=ageFrom(document.getElementById('u_dob').value)||'';}
 function showAccess(){const h=document.getElementById('u_acc_hint');if(h)h.textContent='Workspace access: '+accessFromLevel(document.getElementById('u_level').value);}
 function onPhotoPick(inp){
@@ -5233,7 +5314,7 @@ async function saveNewUser(){
       dob:g('u_dob')||null,idnum:g('u_idnum'),address:g('u_addr'),years:g('u_years'),
       emergency:g('u_emerg'),prev:g('u_prev'),start:g('u_start')||null,
       education:g('u_edu'),certs:g('u_cert'),skills:g('u_skill'),photo:_userPhoto||''};
-    const {data,error}=await sb().functions.invoke('manage-user',{body});
+    const {data,error}=await sb().functions.invoke(MANAGE_USER_FN,{body});
     if(error)throw new Error(await fnErrMsg(error,data));
     if(data&&data.error)throw new Error(data.error);
     closeModal();_userPhoto='';
@@ -5269,7 +5350,7 @@ async function delUser(i){
   const u=USERS_DATA[i];if(!u||u.access==='Owner')return;
   if(!confirm('Remove '+fullName(u)+'?\n\nThis deletes their sign-in account as well — they will no longer be able to log in.'))return;
   try{
-    const {data,error}=await sb().functions.invoke('manage-user',{body:{action:'delete',id:u.id}});
+    const {data,error}=await sb().functions.invoke(MANAGE_USER_FN,{body:{action:'delete',id:u.id}});
     if(error)throw new Error(await fnErrMsg(error,data));
     if(data&&data.error)throw new Error(data.error);
     USERS_DATA.splice(i,1);go('settings');toast('Staff member removed');
