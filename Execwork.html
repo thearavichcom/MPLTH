@@ -5122,6 +5122,23 @@ async function changePw(){
 }
 /* ---- Settings · staff levels & access control ---- */
 const USER_LEVELS=['GM','COM','Manager','Senior Staff','Staff','Viewer'];
+/* v7.3 — supabase-js sets data to null on a non-2xx reply, so the useful
+   message the edge function sent sits unread inside error.context. Without
+   this the user only ever sees "Edge Function returned a non-2xx status
+   code", which says nothing about what actually went wrong. */
+async function fnErrMsg(error,data){
+  if(data&&data.error)return data.error;
+  try{
+    const r=error&&error.context;
+    if(r&&typeof r.clone==='function'){
+      const c=r.clone();let j=null;
+      try{j=await c.json();}catch(_){
+        try{const t=await r.clone().text();if(t)return t.slice(0,300)+(r.status?' ('+r.status+')':'');}catch(_2){}}
+      if(j&&(j.error||j.message))return (j.error||j.message)+(r.status?' ('+r.status+')':'');
+    }
+    if(r&&r.status)return (error.message||'Request failed')+' ('+r.status+')';
+  }catch(_){}
+  return (error&&error.message)||'Request failed';}
 function accessFromLevel(l){return (l==='GM'||l==='COM')?'Owner':(l==='Viewer'?'Viewer':'Staff');}
 function ageFrom(dob){if(!dob)return '';const b=new Date(dob+'T00:00'),n=new Date();
   let a=n.getFullYear()-b.getFullYear();const m=n.getMonth()-b.getMonth();
@@ -5217,7 +5234,7 @@ async function saveNewUser(){
       emergency:g('u_emerg'),prev:g('u_prev'),start:g('u_start')||null,
       education:g('u_edu'),certs:g('u_cert'),skills:g('u_skill'),photo:_userPhoto||''};
     const {data,error}=await sb().functions.invoke('manage-user',{body});
-    if(error)throw new Error((data&&data.error)||error.message);
+    if(error)throw new Error(await fnErrMsg(error,data));
     if(data&&data.error)throw new Error(data.error);
     closeModal();_userPhoto='';
     await loadAll();go('settings');
@@ -5253,7 +5270,7 @@ async function delUser(i){
   if(!confirm('Remove '+fullName(u)+'?\n\nThis deletes their sign-in account as well — they will no longer be able to log in.'))return;
   try{
     const {data,error}=await sb().functions.invoke('manage-user',{body:{action:'delete',id:u.id}});
-    if(error)throw new Error((data&&data.error)||error.message);
+    if(error)throw new Error(await fnErrMsg(error,data));
     if(data&&data.error)throw new Error(data.error);
     USERS_DATA.splice(i,1);go('settings');toast('Staff member removed');
   }catch(e){toast(e.message||'Could not remove the staff member',true);}
