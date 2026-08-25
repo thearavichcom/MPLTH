@@ -31,3 +31,7 @@
   from = "/dgify"
   to = "/dgify.html"
   status = 200
+[[redirects]]
+  from = "/pdf"
+  to = "/pdf.html"
+  status = 200
