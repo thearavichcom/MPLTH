@@ -1339,6 +1339,7 @@ async function fetchDocFiles(){
     const {data,error}=await sb().from('doc_files').select('*').order('created_at',{ascending:false});
     if(error){dbErr(error,'load documents');return [];}
     return (data||[]).map(r=>({id:r.id,section:r.section,title:r.title||'',
+      tag:r.tag||'Other',
       name:r.file_name||'',path:r.storage_path,mime:r.mime||'',size:Number(r.size_bytes||0),
       uid:r.created_by,by:codeOf(r.created_by),at:fmtAt(r.created_at)}));
   }catch(e){dbErr(e,'load documents');return [];}
@@ -1433,7 +1434,7 @@ async function loadAll(){
   AGENTS=agn;FWDMAIL=fwm;agentSearch='';
   supplyOpen=null;supplyForm=null;
   custOpen=null;custImport=null;custForm=null;custSearch='';
-  calSub='calendar';orgSub='chart';annDismissed={};
+  calSub='calendar';orgSub='chart';annDismissed={};docTag='All';
   leaveYear=new Date().getFullYear();leaveEmp=null;
   try{const {data:st}=await sb().from('app_settings').select('*');
     (st||[]).forEach(s=>{if(s.key==='moduleEnabled')moduleEnabled=s.value||{};
@@ -1515,6 +1516,12 @@ let EVENTS=[];
 let DOCFILES=[];
 const DOC_BUCKET='documents';
 const DOC_MAX=5*1024*1024;          /* 5 MB per file */
+/* v7.9 — every file is filed under exactly one tag, so the shelf stays
+   navigable as it grows. The list is fixed on purpose: a free-text tag
+   becomes eleven spellings of the same word within a month. */
+const DOC_TAGS=['Sales','Operations','Customs','Transport','Carrier','Vendor',
+                'Agents','Account','Admin','HR','Other'];
+let docTag='All';                   /* which tag the list is filtered to */
 let VISITS=[];
 const BUDGET={annual:18,ytd:9.0,months:['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],target:[1.5,1.5,1.5,1.5,1.5,1.5,1.5,1.5,1.5,1.5,1.5,1.5],actual:[1.3,1.45,1.6,1.4,1.55,1.7,null,null,null,null,null,null],nowIdx:6};
 const _y=_cn.getFullYear(),_m=_cn.getMonth();
@@ -5220,24 +5227,37 @@ function fmtBytes(n){n=Number(n)||0;
   return (n/1024/1024).toFixed(1)+' MB';}
 function fileExt(name){const p=String(name||'').split('.');
   return p.length>1?p.pop().slice(0,4):'file';}
-function canDelDoc(f){return f.uid===MY.uid||isOwner();}
+/* v7.9 — adding and removing files is a GM/COM job. Everyone else reads. */
+function canUploadDoc(){return isOwner();}
+function canDelDoc(f){return isOwner();}
 function viewDocuments(){
   const items=[{k:'general',label:'General'},{k:'forms',label:'Forms'}];
   if(!items.some(it=>it.k===docSub))docSub='general';
   const tabs=`<div class="subtabs">${items.map(it=>`<button class="subtab${docSub===it.k?' on':''}" onclick="setDocSub('${it.k}')">${it.label}</button>`).join('')}</div>`;
   return tabs+viewDocFiles(docSub);}
+function docSortKey(f){return String(f.title||f.name||'').toLocaleLowerCase();}
+function docName(f){return f.title||f.name;}
+function setDocTag(t){docTag=t;go('documents');}
 function viewDocFiles(section){
-  const list=DOCFILES.filter(f=>f.section===section);
+  const own=isOwner();
+  const all=DOCFILES.filter(f=>f.section===section);
+  /* v7.9 — filed alphabetically by the name people actually read */
+  const list=all.filter(f=>docTag==='All'||f.tag===docTag)
+                .sort((a,b)=>docSortKey(a).localeCompare(docSortKey(b)));
   const blurb=section==='forms'
-    ? 'Company forms and templates. Upload the file itself — everyone signed in can download it.'
-    : 'Shared company documents. Upload the file itself — everyone signed in can download it.';
-  const drop=`<div class="drop" id="dz" ondragover="docDrag(event,1)" ondragleave="docDrag(event,0)" ondrop="docDrop(event)"><div class="dt">Drop a file here, or choose one below</div><div class="dh">Up to 5 MB per file. Anything larger has to go on the Drive instead.</div><div class="dr"><input class="input" id="docTitle" placeholder="Title (optional)"><input type="file" id="docFile" style="font-size:12.5px"><button class="btn-primary btn" id="docUp" onclick="uploadDoc()">${mi('plus',15)}Upload</button></div><div id="docProg"></div></div>`;
-  const rows=list.map(f=>`<div class="frow"><div class="fi">${esc(fileExt(f.name))}</div><div class="fb"><div class="fn">${esc(f.title||f.name)}</div><div class="fm">${f.title?`<span>${esc(f.name)}</span>`:''}<span class="chip">${esc(fmtBytes(f.size))}</span><span class="ts">${esc(f.at)}</span><span class="by">· ${esc(f.by)}</span></div></div><div class="fa"><button class="icon-btn" title="Download" onclick="downloadDoc('${f.id}')">${mi('download',16)}</button>${canDelDoc(f)?`<button class="icon-btn" title="Delete" onclick="delDoc('${f.id}')">${mi('trash',16)}</button>`:`<span class="lock-i" title="Uploaded by ${esc(f.by)}">${mi('lock',14)}</span>`}</div></div>`).join('')
-    ||`<div class="empty-hint">${mi('info',14)}No files here yet.</div>`;
-  return `<div class="mod-intro"><p>${blurb}</p></div>${drop}<div class="sub-head" style="margin-top:20px">${list.length} file${list.length===1?'':'s'}</div><div style="border-top:1px solid var(--line)">${rows}</div>`;}
+    ? 'Company forms and templates. Everyone signed in can download; only the GM and COM can add or remove files.'
+    : 'Shared company documents. Everyone signed in can download; only the GM and COM can add or remove files.';
+  const counts={};all.forEach(f=>{counts[f.tag]=(counts[f.tag]||0)+1;});
+  const pills=`<div class="cats" style="margin-top:16px"><button class="cat-pill${docTag==='All'?' on':''}" onclick="setDocTag('All')">All<span style="opacity:.6"> ${all.length}</span></button>${DOC_TAGS.filter(t=>counts[t]).map(t=>`<button class="cat-pill${docTag===t?' on':''}" onclick="setDocTag('${t}')">${esc(t)}<span style="opacity:.6"> ${counts[t]}</span></button>`).join('')}</div>`;
+  const drop=own?`<div class="drop" id="dz" ondragover="docDrag(event,1)" ondragleave="docDrag(event,0)" ondrop="docDrop(event)"><div class="dt">Drop a file here, or choose one below</div><div class="dh">Up to 5 MB per file. Anything larger has to go on the Drive instead.</div><div class="dr"><input class="input" id="docTitle" placeholder="Title (optional)"><select class="input" id="docTagPick" style="width:auto" title="Which part of the business this belongs to">${DOC_TAGS.map(t=>`<option${t==='Other'?' selected':''}>${esc(t)}</option>`).join('')}</select><input type="file" id="docFile" style="font-size:12.5px"><button class="btn-primary btn" id="docUp" onclick="uploadDoc()">${mi('plus',15)}Upload</button></div><div id="docProg"></div></div>`
+    :`<div class="empty-hint" style="margin:16px 0 4px">${mi('lock',14)}Only the GM and COM can add files here. Ask them if something is missing.</div>`;
+  const rows=list.map(f=>`<div class="frow"><div class="fi">${esc(fileExt(f.name))}</div><div class="fb"><div class="fn">${esc(docName(f))}</div><div class="fm"><span class="chip">${esc(f.tag)}</span>${f.title?`<span>${esc(f.name)}</span>`:''}<span class="chip">${esc(fmtBytes(f.size))}</span><span class="ts">${esc(f.at)}</span><span class="by">· ${esc(f.by)}</span></div></div><div class="fa"><button class="icon-btn" title="Download" onclick="downloadDoc('${f.id}')">${mi('download',16)}</button>${canDelDoc(f)?`<button class="icon-btn" title="Delete" onclick="delDoc('${f.id}')">${mi('trash',16)}</button>`:''}</div></div>`).join('')
+    ||`<div class="empty-hint">${mi('info',14)}${all.length?'Nothing filed under '+esc(docTag)+'.':'No files here yet.'}</div>`;
+  return `<div class="mod-intro"><p>${blurb}</p></div>${drop}${pills}<div class="sub-head" style="margin-top:16px">${list.length} file${list.length===1?'':'s'}${docTag==='All'?'':' · '+esc(docTag)}</div><div style="border-top:1px solid var(--line)">${rows}</div>`;}
 function docDrag(e,on){e.preventDefault();
   const z=document.getElementById('dz');if(z)z.classList.toggle('over',!!on);}
 function docDrop(e){docDrag(e,0);
+  if(!canUploadDoc())return;
   const f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];if(!f)return;
   const el=document.getElementById('docFile');
   try{const dt=new DataTransfer();dt.items.add(f);el.files=dt.files;}catch(_){}
@@ -5245,12 +5265,16 @@ function docDrop(e){docDrag(e,0);
 function docProg(pct,txt){const b=document.getElementById('docProg');if(!b)return;
   b.innerHTML=pct==null?'':`<div class="fbar"><i style="width:${pct}%"></i></div><div class="dh" style="margin-top:6px">${esc(txt||'')}</div>`;}
 async function uploadDoc(dropped){
+  if(!canUploadDoc()){toast('Only the GM or COM can add files here',true);return;}
   const el=document.getElementById('docFile');
   const file=dropped||(el&&el.files&&el.files[0]);
   if(!file){toast('Choose a file first',true);return;}
   if(file.size>DOC_MAX){toast('That file is '+fmtBytes(file.size)+'. The limit is 5 MB.',true);return;}
   const tEl=document.getElementById('docTitle');
   const title=(tEl&&tEl.value.trim())||'';
+  const gEl=document.getElementById('docTagPick');
+  const tag=(gEl&&gEl.value)||'Other';
+  if(DOC_TAGS.indexOf(tag)<0){toast('Pick a tag for this file',true);return;}
   const btn=document.getElementById('docUp');if(btn)btn.disabled=true;
   docProg(35,'Uploading '+file.name+'…');
   const safe=file.name.replace(/[^A-Za-z0-9._-]+/g,'_').slice(-80);
@@ -5261,10 +5285,11 @@ async function uploadDoc(dropped){
     if(upErr)throw upErr;
     docProg(80,'Saving…');
     const {data,error}=await sb().from('doc_files').insert({section:docSub,
-      title:title||null,file_name:file.name,storage_path:path,
+      title:title||null,tag:tag,file_name:file.name,storage_path:path,
       mime:file.type||null,size_bytes:file.size}).select().single();
     if(error){await sb().storage.from(DOC_BUCKET).remove([path]);throw error;}
     DOCFILES.unshift({id:data.id,section:data.section,title:data.title||'',
+      tag:data.tag||'Other',
       name:data.file_name,path:data.storage_path,mime:data.mime||'',
       size:Number(data.size_bytes||0),uid:data.created_by,by:codeOf(data.created_by),
       at:fmtAt(data.created_at)});
@@ -5284,6 +5309,7 @@ async function downloadDoc(id){
   }catch(e){dbErr(e,'open the file');}}
 async function delDoc(id){
   const f=DOCFILES.find(x=>x.id===id);if(!f||!canDelDoc(f))return;
+  if(!isOwner()){toast('Only the GM or COM can remove files here',true);return;}
   if(!confirm('Delete '+(f.title||f.name)+'?\n\nThe file is removed for everyone.'))return;
   try{
     const {error}=await sb().from('doc_files').delete().eq('id',id);
