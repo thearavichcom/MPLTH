@@ -42,6 +42,11 @@
   .nav-item:hover{background:var(--surface-3);color:var(--ink)}
   .nav-item.active{background:var(--accent-soft);color:var(--accent-ink);font-weight:600}
   .nav-item.active .ti{color:var(--accent)}
+  /* v7.8 — a module you may not open is still listed, just faded and inert,
+     so everybody can see the shape of the whole workspace. */
+  .nav-item.locked{opacity:.42;cursor:not-allowed}
+  .nav-item.locked:hover{background:none;color:var(--muted)}
+  .nav-item .nav-lock{margin-left:auto;flex:none;opacity:.8}
   .owners{display:flex;align-items:center;gap:6px;padding:2px 8px 8px}
   .av{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:#fff;flex-shrink:0}
   .av.gm{background:var(--accent)}.av.co{background:#0E7C86}
@@ -156,6 +161,12 @@
   .todo .txt{font-size:14px;margin-bottom:7px}
   .todo.done .txt{color:var(--muted);text-decoration:line-through}
   .todo .body{flex:1;min-width:0}.todo .meta{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+  /* v7.7 — the row controls are inline SVG now, which are block-level,
+     so the action strip needs to lay them out in a row itself. */
+  .todo .acts{display:flex;align-items:center;gap:9px;flex-shrink:0;padding-top:2px}
+  .todo .acts .icon-btn{color:var(--faint)}
+  .todo .acts .icon-btn:hover{color:var(--accent)}
+  .todo .lock-i{display:flex;color:var(--faint)}
   .proj-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px;margin-top:6px}
   .proj{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:18px;cursor:pointer;transition:border-color .12s,box-shadow .12s}
   .proj:hover{border-color:var(--accent);box-shadow:0 2px 12px rgba(11,87,208,.08)}
@@ -817,6 +828,38 @@ input,select,textarea{font-size:16px}
   .day-nav{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:16px 0 4px}
   .day-title{font-size:16px;font-weight:700;margin-right:4px}
   .day-sub{font-size:12.5px;color:var(--muted)}
+  /* v7.7 — three-day panel: yesterday, the open day and tomorrow side by side */
+  .pan3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:14px;align-items:start}
+  .pcol{border:1px solid var(--line);border-radius:var(--r);background:var(--surface);display:flex;flex-direction:column;min-width:0}
+  .pcol.mid{border-color:var(--accent);box-shadow:0 1px 4px rgba(15,30,51,.07)}
+  .pch{padding:11px 14px;border-bottom:1px solid var(--line);display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;background:var(--surface-2);border-radius:var(--r) var(--r) 0 0}
+  .pcol.mid .pch{background:var(--accent-soft,var(--surface-2))}
+  .pch .pt{font-size:14px;font-weight:700;color:var(--ink)}
+  .pch .pd{font-size:11.5px;color:var(--muted)}
+  .pch .pn{font-size:11.5px;color:var(--muted);margin-left:auto}
+  .pbody{padding:2px 14px 10px}
+  .pbody .todo{padding:11px 0}
+  .pbody .todo:last-child{border-bottom:0}
+  .pbody .quick{margin:12px 0 6px}
+  .pbody .empty-hint{margin:14px 0}
+  .pro{padding:9px 14px 12px;border-top:1px solid var(--line-soft)}
+  .pro h3{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--faint);font-weight:700;margin:0 0 2px}
+  @media(max-width:980px){.pan3{grid-template-columns:1fr}}
+  /* v7.8 — Documents holds real files now, not links to somewhere else */
+  .drop{border:2px dashed var(--line);border-radius:var(--r);padding:22px 18px;text-align:center;background:var(--surface-2);transition:border-color .12s,background .12s;margin-top:14px}
+  .drop.over{border-color:var(--accent);background:var(--accent-soft)}
+  .drop .dt{font-size:14px;font-weight:600;color:var(--ink);margin-bottom:4px}
+  .drop .dh{font-size:12.5px;color:var(--muted)}
+  .drop .dr{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:14px;align-items:center}
+  .drop .dr .input{max-width:280px}
+  .fbar{height:4px;border-radius:99px;background:var(--surface-3);overflow:hidden;margin-top:12px}
+  .fbar i{display:block;height:100%;background:var(--accent);transition:width .18s}
+  .frow{display:flex;align-items:center;gap:12px;padding:12px 4px;border-bottom:1px solid var(--line-soft)}
+  .frow .fi{width:34px;height:34px;border-radius:8px;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;flex:none;font-size:10px;font-weight:800;letter-spacing:.02em;text-transform:uppercase}
+  .frow .fb{flex:1;min-width:0}
+  .frow .fn{font-size:14px;font-weight:600;color:var(--ink);word-break:break-word}
+  .frow .fm{font-size:11.5px;color:var(--muted);display:flex;gap:7px;flex-wrap:wrap;margin-top:3px}
+  .frow .fa{display:flex;align-items:center;gap:9px;flex:none}
   .fold-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-top:16px}
   .fold{border:1px solid var(--line);border-radius:var(--r);padding:14px 15px;cursor:pointer;background:var(--surface);text-align:left;font-family:var(--sans)}
   .fold:hover{background:var(--surface-2);border-color:var(--accent)}
@@ -1015,6 +1058,7 @@ let peopleSub='directory',assessEmp=null,assessYear=new Date().getFullYear(),ops
 let KPITPL=[],KPIENT=[],assessTab='book',kpiYM='';
 let suppliesSub='stationery',dailyopsSub='air',handbookSub='culture',calSub='calendar',orgSub='chart';
 let toolsSub='pdf',customsSub='sysaccess',PC=[],PCSUB=null,pcFrom='',pcTo='',pcLimit=0;
+let TOOL_LINKS={};                  /* v7.8 — Tools URLs, set in the app */
 let HOLIDAYS=[],ANNS=[],annDismissed={};
 let devSub='devices',docSub='general',sopCustomer='All',rlsPos='';
 let SOPCUST=[],SOPLOG=[];
@@ -1031,7 +1075,7 @@ const _isoDay=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+
 const _isoToday=()=>_isoDay(new Date());
 let todayDate=_isoToday();          /* Today Work: which day is open      */
 let todayMonth=_ymNow();            /* Today Work: which month folder     */
-let todayMode='day';                /* 'day' | 'folders' | 'month'        */
+let todayMode='panel';              /* 'panel' | 'day' | 'folders' | 'month' */
 let salesYM=_ymNow();               /* Sales metrics month                */
 let budgetYear=new Date().getFullYear();
 let BUDGET_SET=[],ACHIEVEMENTS=[],SALESM=[];
@@ -1058,6 +1102,9 @@ function sb(){if(!SB)SB=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 
 /* identity ---------------------------------------------------------- */
 let MY={uid:null,code:'',name:'',title:'',access:'Staff',level:''};
+/* v7.7 — one device at a time. The tab that signed in last owns the seat;
+   every other tab notices within a heartbeat and shows itself out. */
+let MYDEVICE=null,_sessTimer=null,_sessKicked=false;
 let USERMAP={};                       /* uid -> {code,name,title,access} */
 function codeOf(uid){return (USERMAP[uid]&&USERMAP[uid].code)||'—';}
 function nameOf(uid){return (USERMAP[uid]&&USERMAP[uid].name)||'Unknown';}
@@ -1287,13 +1334,22 @@ async function fetchAll(coll,order){
     return (data||[]).map(m.from);
   }catch(e){dbErr(e,'load '+((m&&m.t)||coll));return [];}
 }
+async function fetchDocFiles(){
+  try{
+    const {data,error}=await sb().from('doc_files').select('*').order('created_at',{ascending:false});
+    if(error){dbErr(error,'load documents');return [];}
+    return (data||[]).map(r=>({id:r.id,section:r.section,title:r.title||'',
+      name:r.file_name||'',path:r.storage_path,mime:r.mime||'',size:Number(r.size_bytes||0),
+      uid:r.created_by,by:codeOf(r.created_by),at:fmtAt(r.created_at)}));
+  }catch(e){dbErr(e,'load documents');return [];}
+}
 async function fetchVisits(){
   try{
     const {data,error}=await sb().from('meetings')
-      .select('id,company,meeting_date,meeting_time,meeting_address,objective,summary,status,sales_person_id,user_profiles!meetings_sales_person_id_fkey(name)')
+      .select('id,company,meeting_date,meeting_time,meeting_address,objective,summary,status,sales_person_id,co_visitor_id,sales:user_profiles!meetings_sales_person_id_fkey(name),covisit:user_profiles!meetings_co_visitor_id_fkey(name)')
       .order('meeting_date',{ascending:false});
     if(error){dbErr(error,'load meetings');return [];}
-    return (data||[]).map(r=>({id:r.id,company:r.company||'',date:r.meeting_date||'',time:r.meeting_time||'',address:r.meeting_address||'',objective:r.objective||'',summary:r.summary||'',status:(r.status||'appointed'),sales:(r.user_profiles&&r.user_profiles.name)||''}));
+    return (data||[]).map(r=>({id:r.id,company:r.company||'',date:r.meeting_date||'',time:r.meeting_time||'',address:r.meeting_address||'',objective:r.objective||'',summary:r.summary||'',status:(r.status||'appointed'),sales:(r.sales&&r.sales.name)||'',covisit:(r.covisit&&r.covisit.name)||''}));
   }catch(e){dbErr(e,'load meetings');return [];}
 }
 
@@ -1319,12 +1375,12 @@ async function loadAll(){
   me=MY.code;todoView=MY.code;
   NAMES[MY.code]=MY.title||MY.name;
 
-  const [td,pj,pu,pm,ev,lv,lb,as,cr,lg,sp,vc,sop,hb,jf,ja,nt,rm,ra,vis,uma,pc]=await Promise.all([
+  const [td,pj,pu,pm,ev,lv,lb,as,cr,lg,sp,vc,sop,hb,jf,ja,nt,rm,ra,vis,uma,pc,df]=await Promise.all([
     fetchAll('todos'),fetchAll('projects'),fetchAll('project_updates'),fetchAll('project_milestones'),
     fetchAll('events'),fetchAll('leave'),fetchAll('leaveBal'),fetchAll('assess'),fetchAll('creds'),
     fetchAll('logs'),fetchAll('supplies'),fetchAll('vouchers'),fetchAll('sops','created_at'),fetchAll('handbook'),
     fetchAll('jobForms'),fetchAll('applicants'),fetchAll('notices'),fetchAll('reminders'),fetchAll('rls'),
-    fetchVisits(),fetchAll('uma'),fetchPetty()
+    fetchVisits(),fetchAll('uma'),fetchPetty(),fetchDocFiles()
   ]);
 
   todos=td;
@@ -1332,7 +1388,7 @@ async function loadAll(){
   const byPid={};PROJECTS.forEach(p=>byPid[p.id]=p);
   pu.forEach(u=>{if(byPid[u.project_id])byPid[u.project_id].updates.push(u);});
   pm.forEach(x=>{if(byPid[x.project_id])byPid[x.project_id].milestones.push(x);});
-  EVENTS=ev;LEAVE=lv;LEAVE_BAL=lb;ASSESS=as;CREDS=cr;VISITS=vis;
+  EVENTS=ev;LEAVE=lv;LEAVE_BAL=lb;ASSESS=as;CREDS=cr;VISITS=vis;DOCFILES=df;
 
   Object.keys(LOGS).forEach(k=>LOGS[k].entries=[]);
   lg.forEach(e=>{if(LOGS[e.module_key])LOGS[e.module_key].entries.push(e);});
@@ -1381,10 +1437,11 @@ async function loadAll(){
   leaveYear=new Date().getFullYear();leaveEmp=null;
   try{const {data:st}=await sb().from('app_settings').select('*');
     (st||[]).forEach(s=>{if(s.key==='moduleEnabled')moduleEnabled=s.value||{};
+                         if(s.key==='toolLinks')TOOL_LINKS=s.value||{};
                          if(s.key==='crmUrl')CRM_URL=(s.value&&s.value.url)||'';
                          if(s.key==='pettyCash')pcLimit=Number((s.value&&s.value.limit)||0)||0;
                          if(s.key==='company')COMPANY=Object.assign({name:'',name_th:'',tax_id:'',branch:'',phone:'',email:'',address:''},s.value||{});if(s.key==='orgchart'&&s.value)ORG=s.value;});}catch(e){}
-  todayDate=_isoToday();todayMonth=todayDate.slice(0,7);todayMode='day';salesYM=_ymNow();
+  todayDate=_isoToday();todayMonth=todayDate.slice(0,7);todayMode='panel';salesYM=_ymNow();
   budgetYear=new Date().getFullYear();remDismissed={};
   try{await loadChat();}catch(e){}
   try{await loadModuleFlags();}catch(e){}
@@ -1453,6 +1510,11 @@ let PROJECTS=[];
 const _isoD=(y,m,d)=>y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
 const _dim=(y,m)=>new Date(y,m+1,0).getDate();const _cap=d=>Math.min(Math.max(d,1),_dim(_cn.getFullYear(),_cn.getMonth()));
 let EVENTS=[];
+/* v7.8 — Documents keeps the files themselves in Supabase Storage; this
+   array is only the index that points at them. */
+let DOCFILES=[];
+const DOC_BUCKET='documents';
+const DOC_MAX=5*1024*1024;          /* 5 MB per file */
 let VISITS=[];
 const BUDGET={annual:18,ytd:9.0,months:['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],target:[1.5,1.5,1.5,1.5,1.5,1.5,1.5,1.5,1.5,1.5,1.5,1.5],actual:[1.3,1.45,1.6,1.4,1.55,1.7,null,null,null,null,null,null],nowIdx:6};
 const _y=_cn.getFullYear(),_m=_cn.getMonth();
@@ -1631,7 +1693,7 @@ let RLS={
 };
 /* Notices surfaced inside modules (approvals etc.) */
 let NOTICES={today:[]};
-const ownerTag=by=>by===me?`<button class="icon-btn" title="Owned by you"><i class="ti ti-pencil"></i></button>`:`<i class="ti ti-lock lock-i" title="Created by ${by} — view only"></i>`;
+const ownerTag=by=>by===me?'':`<span class="lock-i" title="Created by ${by} — view only">${mi('lock',14)}</span>`;
 const trashBtn=(by,fn)=>by===me?`<button class="icon-btn" title="Delete" onclick="${fn}">${mi('trash',16)}</button>`:'';
 
 function persist(){/* data lives in Supabase now; writes go through dbAdd/dbUpdate/dbDel */}
@@ -1653,9 +1715,42 @@ async function signIn(){
     const {data,error}=await sb().auth.signInWithPassword({email:em,password:pwv});
     if(error)throw error;
     MY.uid=data.user.id;MY.email=data.user.email;
+    await claimSession();
     await enterApp();
   }catch(e){msg.textContent=(e.message||'Sign-in failed')+'.';msg.className='auth-msg bad';}
   finally{if(btn)btn.disabled=false;}
+}
+function newDeviceId(){try{if(crypto&&crypto.randomUUID)return crypto.randomUUID();}catch(e){}
+  return 'd'+Date.now().toString(36)+Math.random().toString(36).slice(2,10);}
+async function claimSession(){
+  if(!MY.uid)return;
+  MYDEVICE=newDeviceId();
+  /* revoke the refresh tokens held by any other device straight away */
+  try{await sb().auth.signOut({scope:'others'});}catch(e){}
+  try{await sb().from('app_sessions').upsert({user_uid:MY.uid,device_id:MYDEVICE,
+    user_agent:(navigator.userAgent||'').slice(0,300),last_seen:new Date().toISOString()},
+    {onConflict:'user_uid'});}catch(e){}
+}
+async function sessionBeat(){
+  if(!MY.uid||!MYDEVICE||_sessKicked)return;
+  try{
+    const {data,error}=await sb().from('app_sessions').select('device_id')
+      .eq('user_uid',MY.uid).maybeSingle();
+    if(error)return;                       /* offline or blocked — leave them working */
+    if(data&&data.device_id&&data.device_id!==MYDEVICE){kickSession();return;}
+    if(!data){await claimSession();return;}
+    await sb().from('app_sessions').update({last_seen:new Date().toISOString()})
+      .eq('user_uid',MY.uid).eq('device_id',MYDEVICE);
+  }catch(e){}
+}
+function startSessionWatch(){stopSessionWatch();_sessKicked=false;
+  _sessTimer=setInterval(sessionBeat,45000);}
+function stopSessionWatch(){if(_sessTimer){clearInterval(_sessTimer);_sessTimer=null;}}
+async function kickSession(){
+  if(_sessKicked)return;_sessKicked=true;stopSessionWatch();MYDEVICE=null;
+  await logout();
+  const msg=document.getElementById('authMsg');
+  if(msg){msg.textContent='This account was signed in on another device. Only one device can be signed in at a time.';msg.className='auth-msg bad';}
 }
 async function enterApp(){
   const msg=document.getElementById('authMsg');if(msg){msg.textContent='Loading your workspace…';msg.className='auth-msg';}
@@ -1667,16 +1762,24 @@ async function enterApp(){
   const upn=document.getElementById('upName');if(upn)upn.textContent=MY.title||MY.name;
   const umn=document.getElementById('umName');if(umn)umn.textContent='Signed in as '+(MY.name||MY.email);
   const umr=document.getElementById('umRole');if(umr)umr.textContent=MY.access+' · '+(MY.title||'—');
-  renderReminders();bootRoute();
+  renderReminders();bootRoute();startSessionWatch();
   if(msg){msg.textContent='';msg.className='auth-msg';}
 }
 async function restoreSession(){
   try{const {data}=await sb().auth.getSession();
-    if(data&&data.session&&data.session.user){MY.uid=data.session.user.id;MY.email=data.session.user.email;await enterApp();}
+    if(data&&data.session&&data.session.user){MY.uid=data.session.user.id;MY.email=data.session.user.email;
+      /* a reload on the same device keeps the seat; a revoked one is shown out */
+      const {data:s}=await sb().from('app_sessions').select('device_id').eq('user_uid',MY.uid).maybeSingle();
+      if(s&&s.device_id&&MYDEVICE&&s.device_id!==MYDEVICE){await kickSession();return;}
+      if(!MYDEVICE)await claimSession();
+      await enterApp();}
   }catch(e){}
 }
 function login(){/* replaced by Supabase Auth — see signIn() */}
-async function logout(){closeUserMenu();try{await sb().auth.signOut();}catch(e){}
+async function logout(){closeUserMenu();stopSessionWatch();
+  try{if(MY.uid&&MYDEVICE)await sb().from('app_sessions').delete().eq('user_uid',MY.uid).eq('device_id',MYDEVICE);}catch(e){}
+  MYDEVICE=null;
+  try{await sb().auth.signOut();}catch(e){}
   me=null;projOpen=null;MY={uid:null,code:'',name:'',title:'',access:'Staff',level:''};
   try{history.replaceState(null,'','#');}catch(e){}
   document.getElementById('app').style.display='none';document.getElementById('auth').style.display='flex';
@@ -1709,12 +1812,20 @@ function toggleUserMenu(){const m=document.getElementById('userMenu'),o=document
 function closeUserMenu(){const m=document.getElementById('userMenu'),o=document.getElementById('userOv');if(m)m.style.display='none';if(o)o.classList.remove('show');}
 function openSettings(){closeUserMenu();go('settings');}
 
+/* v7.8 — every module stays on the rail. One the person may not open is
+   drawn faded, carries a padlock and does nothing when clicked. A module
+   switched off for the whole company is a different thing entirely, so it
+   is still hidden. */
+function moduleOff(key){return moduleEnabled[key]===false;}
 function buildNav(active){
-  /* keep only what this person may open, then drop any group heading that
-     no longer has a module beneath it */
-  const keep=NAV.filter(n=>n.sep||canOpen(n.key));
+  const keep=NAV.filter(n=>n.sep||!moduleOff(n.key));
   const items=keep.filter((n,i)=>!n.sep||(keep[i+1]&&!keep[i+1].sep));
-  document.getElementById('nav').innerHTML=items.map(n=>n.sep?`<div class="nav-label">${n.sep}</div>`:`<button class="nav-item${n.key===active?' active':''}" onclick="navGo('${n.key}')">${svgIcon(n.key)}${n.label}${n.key==='chat'?chatBadgeHtml():''}${updDot(n.key)}</button>`).join('');}
+  document.getElementById('nav').innerHTML=items.map(n=>{
+    if(n.sep)return `<div class="nav-label">${n.sep}</div>`;
+    const open=canOpen(n.key);
+    if(!open)return `<button class="nav-item locked" type="button" aria-disabled="true" title="You do not have access to ${esc(TITLES[n.key]||n.label)}" onclick="return false">${svgIcon(n.key)}${n.label}<span class="nav-lock">${mi('lock',14)}</span></button>`;
+    return `<button class="nav-item${n.key===active?' active':''}" onclick="navGo('${n.key}')">${svgIcon(n.key)}${n.label}${n.key==='chat'?chatBadgeHtml():''}${updDot(n.key)}</button>`;
+  }).join('');}
 /* Sidebar clicks always land on the top level of a module, never inside a
    document that happened to be open the last time you were there. */
 function navGo(key){
@@ -1795,6 +1906,7 @@ function visibleTodos(){const oc=ownerCodes();
 function dayOf(t){return t.day||_isoToday();}
 function dayLabel(ds){const t=_isoToday();if(ds===t)return 'Today';
   const y=new Date();y.setDate(y.getDate()-1);if(ds===_isoDay(y))return 'Yesterday';
+  const m=new Date();m.setDate(m.getDate()+1);if(ds===_isoDay(m))return 'Tomorrow';
   return new Date(ds+'T00:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'numeric'});}
 function monthLabel(ym){const p=ym.split('-');return new Date(+p[0],+p[1]-1,1).toLocaleDateString('en-US',{month:'long',year:'numeric'});}
 function shiftDay(n){const dt=new Date(todayDate+'T00:00');dt.setDate(dt.getDate()+n);todayDate=_isoDay(dt);todayMonth=todayDate.slice(0,7);go('today');}
@@ -1803,7 +1915,7 @@ function shiftTodayMonth(n){const dt=new Date(todayDate+'T00:00');const dd=dt.ge
   const last=new Date(dt.getFullYear(),dt.getMonth()+1,0).getDate();
   dt.setDate(Math.min(dd,last));
   todayDate=_isoDay(dt);todayMonth=todayDate.slice(0,7);go('today');}
-function jumpDay(v){if(!v)return;todayDate=v;todayMonth=v.slice(0,7);todayMode='day';go('today');}
+function jumpDay(v){if(!v)return;todayDate=v;todayMonth=v.slice(0,7);if(todayMode!=='panel')todayMode='day';go('today');}
 function setTodayMode(m){todayMode=m;go('today');}
 function openMonthFolder(ym){todayMonth=ym;todayMode='month';go('today');}
 function fmtRemind(ts){if(!ts)return '';const d=new Date(ts);
@@ -1812,18 +1924,52 @@ function fmtRemind(ts){if(!ts)return '';const d=new Date(ts);
   if(ds===_isoToday())return 'Today '+hm;
   return d.toLocaleDateString('en-GB',{day:'numeric',month:'short'})+' '+hm;}
 
+/* v7.7 — one row renderer shared by Day view and the 3-day panel.
+   Every control is inline SVG: the icon font is unreachable from the
+   office network, so glyph buttons rendered as invisible gaps. */
+function todoRowHtml(t){const idx=todos.indexOf(t);const mine=t.by===me;
+  const past=t.remind_at&&new Date(t.remind_at)<new Date();
+  const rc=t.remind_at?`<span class="rem-chip ${t.done?'doneq':(past?'past':'')}">${mi('bell',12)}${esc(fmtRemind(t.remind_at))}</span>`:'';
+  const tick=`<button class="check${t.done?' done':''}" ${mine?'':'disabled style="cursor:default"'} title="${t.done?'Mark as not done':'Mark as done'}" onclick="toggle(${idx})">${mi(t.done?'circlecheck':'circle',21)}</button>`;
+  const edit=`<button class="icon-btn" title="${mine?'Edit task':'Open task'}" onclick="taskModal(${idx})">${mi(mine?'pencil':'eye',16)}</button>`;
+  const rem=mine?`<button class="icon-btn" title="Change reminder" onclick="editReminder(${idx})">${mi('bellcog',16)}</button>`:'';
+  return `<div class="todo${t.done?' done':''}">${tick}<div class="body"><div class="txt">${prChip(t.priority)}${esc(t.text)}</div><div class="meta">${rc}${t.tags.map(g=>`<span class="chip">${esc(g)}</span>`).join('')}<span class="ts">${esc(t.at)}</span><span class="by">· ${t.by}</span></div></div><div class="acts">${edit}${rem}${trashBtn(t.by,'delTodo('+idx+')')}${ownerTag(t.by)}</div></div>`;}
 function viewToday(){
   const oth=otherOwners();
   const seg=isOwner()&&oth.length?`<div class="seg"><button class="${todoView===me?'on':''}" onclick="setTV('${me}')"><span class="av ${acls(me)}">${me}</span>You</button>${oth.map(o=>`<button class="${todoView===o?'on':''}" onclick="setTV('${o}')"><span class="av ${acls(o)}">${o}</span>${o}</button>`).join('')}<button class="${todoView==='both'?'on':''}" onclick="setTV('both')"><i class="ti ti-users" style="font-size:14px"></i>Both</button></div>`:'';
   const intro=isOwner()
     ? `<p>Your day-by-day list. Entries are private — only you and the other manager can see them.</p>`
     : `<p>Your personal day-by-day list. Nobody else can see these entries — you can download them as Markdown any time.</p>`;
-  const modes=`<div class="seg" style="margin-left:auto"><button class="${todayMode==='day'?'on':''}" onclick="setTodayMode('day')"><i class="ti ti-list-check" style="font-size:14px"></i>Day</button><button class="${todayMode!=='day'?'on':''}" onclick="setTodayMode('folders')"><i class="ti ti-folders" style="font-size:14px"></i>Monthly folders</button></div>`;
+  const modes=`<div class="seg" style="margin-left:auto"><button class="${todayMode==='panel'?'on':''}" onclick="setTodayMode('panel')">${mi('calendar',14)}3-day panel</button><button class="${todayMode==='day'?'on':''}" onclick="setTodayMode('day')">${mi('check',14)}Day</button><button class="${todayMode==='folders'||todayMode==='month'?'on':''}" onclick="setTodayMode('folders')">${mi('hash',14)}Monthly folders</button></div>`;
   let head=`<div class="mod-intro"><div class="row-between" style="flex-wrap:wrap;gap:10px">${intro}${seg}${modes}</div></div>`;
   head=annBanner()+head;
   if(todayMode==='folders')return head+viewTodayFolders();
   if(todayMode==='month')return head+viewTodayMonth();
+  if(todayMode==='panel')return head+viewTodayPanel();
   return head+viewTodayDay();
+}
+/* v7.7 — three days on one screen. The middle column is the open day; the
+   arrows move all three together. Yesterday is read-only for new work, so
+   nothing gets filed into a day that has already closed. */
+function _dayShift(ds,n){const dt=new Date(ds+'T00:00');dt.setDate(dt.getDate()+n);return _isoDay(dt);}
+function panelCol(ds,role){
+  const own=todoView===me||todoView==='both';
+  const list=visibleTodos().filter(t=>dayOf(t)===ds);
+  const actL=list.filter(t=>!t.done),dnL=list.filter(t=>t.done);
+  const canAdd=own&&role!=='prev';
+  const qid='qa_'+ds.replace(/-/g,''),rid='qr_'+ds.replace(/-/g,'');
+  const quick=canAdd?`<div class="quick" style="flex-wrap:wrap"><input class="input" id="${qid}" placeholder="What needs doing?" onkeydown="if(event.key==='Enter')addTodoOn('${qid}','${rid}','${ds}')"><input class="input" id="${rid}" type="datetime-local" value="${ds}T17:00" style="width:100%;min-width:0" title="Reminder time (required)"><button class="btn-primary btn" onclick="addTodoOn('${qid}','${rid}','${ds}')">${mi('plus',15)}Add</button></div>`
+    :(own?`<div class="empty-hint" style="margin:12px 0 6px">${mi('lock',14)}Yesterday is closed for new work \u2014 you can still tick, edit or delete.</div>`
+        :`<div class="empty-hint" style="margin:12px 0 6px">${mi('lock',14)}Viewing ${esc(todoView)}'s list \u2014 read only.</div>`);
+  const rows=actL.map(todoRowHtml).join('')||`<div class="empty-hint">${mi('calendar',14)}Nothing open.</div>`;
+  const done=dnL.length?`<div class="pro"><h3>Achieved \u00b7 ${dnL.length}</h3>${dnL.map(todoRowHtml).join('')}</div>`:'';
+  const nice=new Date(ds+'T00:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
+  return `<div class="pcol${role==='mid'?' mid':''}"><div class="pch"><span class="pt">${esc(dayLabel(ds))}</span><span class="pd">${esc(nice)}</span><span class="pn">${list.length} task${list.length===1?'':'s'} \u00b7 ${dnL.length} done</span></div><div class="pbody">${quick}${rows}</div>${done}</div>`;
+}
+function viewTodayPanel(){
+  const prev=_dayShift(todayDate,-1),next=_dayShift(todayDate,1);
+  const nav=`<div class="day-nav"><button class="nav-btn" onclick="shiftDay(-1)" title="Back one day"><span class="ar">&lsaquo;</span>Back</button><button class="nav-btn now" onclick="jumpDay('${_isoToday()}')">Today</button><button class="nav-btn" onclick="shiftDay(1)" title="Forward one day">Forward<span class="ar">&rsaquo;</span></button><input class="input" type="date" value="${todayDate}" style="width:auto;padding:7px 10px" onchange="jumpDay(this.value)"><span style="flex:1"></span><button class="btn" onclick="exportTodo('day')">${mi('download',15)}Markdown (middle day)</button></div>`;
+  return nav+supplyApprovalPanel()+todayNotices()+`<div class="pan3">${panelCol(prev,'prev')}${panelCol(todayDate,'mid')}${panelCol(next,'next')}</div>`;
 }
 function viewTodayDay(){
   const list=visibleTodos().filter(t=>dayOf(t)===todayDate);
@@ -1833,10 +1979,7 @@ function viewTodayDay(){
   const defR=todayDate+'T17:00';
   const quick=own?`<div class="quick" style="flex-wrap:wrap"><input class="input" id="qa" placeholder="What needs doing?" onkeydown="if(event.key==='Enter')addTodo('qa')"><input class="input" id="qr" type="datetime-local" value="${defR}" style="width:auto;min-width:200px" title="Reminder time (required)"><button class="btn-primary btn" onclick="addTodo('qa')"><i class="ti ti-plus"></i>Add</button></div><div class="empty-hint" style="margin:8px 0 4px"><i class="ti ti-bell"></i>Every task carries a reminder — it shows up in the bell at the top of the screen.</div>`
     :`<div class="empty-hint" style="margin:16px 0 4px"><i class="ti ti-lock"></i>Viewing ${esc(todoView)}'s list — read only.</div>`;
-  const rowHtml=t=>{const idx=todos.indexOf(t);
-    const past=t.remind_at&&new Date(t.remind_at)<new Date();
-    const rc=t.remind_at?`<span class="rem-chip ${t.done?'doneq':(past?'past':'')}"><i class="ti ti-bell" style="font-size:12px"></i>${esc(fmtRemind(t.remind_at))}</span>`:'';
-    return `<div class="todo${t.done?' done':''}"><button class="check${t.done?' done':''}" ${t.by===me?'':'disabled style="cursor:default"'} onclick="toggle(${idx})"><i class="ti ${t.done?'ti-circle-check-filled':'ti-circle'}"></i></button><div class="body"><div class="txt">${prChip(t.priority)}${esc(t.text)}</div><div class="meta">${rc}${t.tags.map(g=>`<span class="chip">${esc(g)}</span>`).join('')}<span class="ts">${esc(t.at)}</span><span class="by">· ${t.by}</span></div></div><div class="acts"><button class="icon-btn" title="Open task" onclick="taskModal(${idx})"><i class="ti ti-eye"></i></button>${t.by===me?`<button class="icon-btn" title="Change reminder" onclick="editReminder(${idx})"><i class="ti ti-bell-cog"></i></button>`:''}${trashBtn(t.by,'delTodo('+idx+')')}${ownerTag(t.by)}</div></div>`;};
+  const rowHtml=todoRowHtml;
   const actL=list.filter(t=>!t.done),dnL=list.filter(t=>t.done);
   const rows=actL.map(rowHtml).join('')||`<div class="empty-hint"><i class="ti ti-calendar-off"></i>Nothing open for ${esc(dayLabel(todayDate))}.</div>`;
   const achSection=dnL.length?`<div class="achieved-head" onclick="todayAchOpen=!todayAchOpen;go('today')"><i class="ti ti-chevron-${todayAchOpen?'down':'right'}"></i><h2>Achieved List</h2><span class="count">${dnL.length}</span></div>${todayAchOpen?`<div style="border-top:1px solid var(--line)">${dnL.map(rowHtml).join('')}</div>`:''}`:'';
@@ -1888,6 +2031,15 @@ function exportTodo(scope){
 function todayNotices(){if(!NOTICES.today.length)return '';const rows=NOTICES.today.map((n,i)=>`<div class="notice ok"><i class="ti ti-calendar-check"></i><div class="ntx">${esc(n.text)}<div class="nts">${esc(n.at)}</div></div><button class="nx" title="Dismiss" onclick="dismissNotice(${i})"><i class="ti ti-x"></i></button></div>`).join('');return `<div style="margin:2px 0 14px">${rows}</div>`;}
 async function dismissNotice(i){const n=NOTICES.today[i];if(!n)return;
   if(await dbDel('notices',n.id)){NOTICES.today.splice(i,1);go('today');}}
+/* v7.7 — add straight onto a named day, used by the panel columns. */
+async function addTodoOn(txtId,remId,ds){
+  const el=document.getElementById(txtId);if(!el)return;const v=el.value.trim();
+  const rel=document.getElementById(remId);const rv=rel?rel.value:'';
+  if(!v){el.focus();return;}
+  if(!rv){toast('Please set a reminder time for this task',true);if(rel)rel.focus();return;}
+  el.value='';
+  const r=await dbAdd('todos',{text:v,tags:['Untagged'],done:false,day:ds,remind_at:new Date(rv).toISOString()});
+  if(r){todos.unshift(r);if(cur==='today')go('today');renderReminders();}}
 async function addTodo(id){const el=document.getElementById(id);if(!el)return;const v=el.value.trim();
   const rel=document.getElementById('qr');const rv=rel?rel.value:'';
   if(!v){el.focus();return;}
@@ -2482,12 +2634,50 @@ function exportKpiTeamJPG(){const el=document.getElementById('kpiTeamPanel');if(
   html2canvas(el,{backgroundColor:'#ffffff',scale:2}).then(cv=>{const a=document.createElement('a');a.href=cv.toDataURL('image/jpeg',0.95);a.download='Team_KPI_'+assessYear+'.jpg';document.body.appendChild(a);a.click();a.remove();toast('Image exported');}).catch(()=>toast('Could not export image',true));}
 
 /* ======================  Tools  (Unified Workspace)  ================= */
-const TOOLS_TABS=[{k:'pdf',label:'PDF'}];
+/* v7.8 — Tools is a shelf of outside systems. The GM and COM set each
+   address from inside the app, so a new tool never needs a redeploy;
+   everybody else simply opens what is there. */
+const TOOLS_TABS=[
+  {k:'pdf',label:'PDF',d:'Merge, split, compress and convert PDF files.',fixed:'pdf'},
+  {k:'sharedpoints',label:'Shared Points',d:'Company SharePoint document library.'},
+  {k:'lqs',label:'LQS',d:'Logistics quotation system.'},
+  {k:'senna',label:'Senna',d:'Senna operations platform.'},
+  {k:'hibob',label:'Hi Bob',d:'HR platform — people, time off and records.'},
+  {k:'rydoo',label:'Rydoo',d:'Expense claims and travel spend.'},
+  {k:'custportal',label:'Customer Portal',d:'Customer-facing shipment portal.'}
+];
+function toolUrl(t){return t.fixed?(EXT_LINKS[t.fixed]||''):(TOOL_LINKS[t.k]||'');}
+function toolCard(t){
+  const url=toolUrl(t),own=isOwner();
+  const open=url
+    ? `<a class="btn btn-primary" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${mi('arrowright',15)}Open ${esc(t.label)}</a>`
+    : `<button class="btn" disabled style="opacity:.55;cursor:not-allowed">${mi('info',15)}Link not set yet</button>`;
+  const setBtn=(own&&!t.fixed)
+    ? `<button class="btn" onclick="editToolLink('${t.k}')">${mi('pencil',15)}${url?'Change link':'Set link'}</button>` : '';
+  const shown=url?`<div style="font-size:12px;color:var(--muted);margin-bottom:16px;word-break:break-all">${esc(url)}</div>`
+    :`<div style="font-size:13px;color:var(--faint);margin-bottom:16px">${own&&!t.fixed?'Set the address and everyone can open it from here.':'The GM or COM has not added this address yet.'}</div>`;
+  return `<div class="mod-intro"><p>${esc(t.d)}</p></div><div class="card" style="text-align:center;padding:34px 20px"><div style="font-size:16px;font-weight:700;margin-bottom:6px">${esc(t.label)}</div>${shown}<div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">${open}${setBtn}</div></div>`;
+}
 function viewTools(){
   if(!TOOLS_TABS.some(t=>t.k===toolsSub))toolsSub='pdf';
   const tabs=`<div class="subtabs">${TOOLS_TABS.map(it=>`<button class="subtab${toolsSub===it.k?' on':''}" onclick="setToolsSub('${it.k}')">${esc(it.label)}</button>`).join('')}</div>`;
-  const body=toolsSub==='pdf'?linkCard('PDF','Merge, split, compress and convert PDF files.','pdf'):'';
-  return tabs+body;}
+  return tabs+toolCard(TOOLS_TABS.find(t=>t.k===toolsSub));}
+function editToolLink(k){
+  if(!isOwner())return;
+  const t=TOOLS_TABS.find(x=>x.k===k);if(!t||t.fixed)return;
+  openModal('Link · '+t.label,[{name:'url',label:'Web address',type:'text',
+    ph:'https://…',val:TOOL_LINKS[k]||''}],async v=>{
+    const u=(v.url||'').trim();
+    if(u&&!/^https?:\/\//i.test(u)){toast('The address must start with https://',true);return;}
+    const next=Object.assign({},TOOL_LINKS);
+    if(u)next[k]=u;else delete next[k];
+    try{
+      const {error}=await sb().from('app_settings').upsert({key:'toolLinks',value:next,
+        created_by:MY.uid,updated_at:new Date().toISOString()},{onConflict:'key'});
+      if(error)throw error;
+      TOOL_LINKS=next;go('tools');toast(u?'Link saved':'Link cleared');
+    }catch(e){dbErr(e,'save tool link');}
+  });}
 function setToolsSub(k){toolsSub=k;go('tools');}
 
 /* =====================  Customs  (Executive Workspace)  ============== */
@@ -2914,7 +3104,7 @@ function calMonthGrid(y,m,mode){
         return `<div class="cal-ev ${hid?'ev-busy':(e.src==='outlook'?'outlook':'')}" title="${tip}" onclick="event.stopPropagation();openEvent(${gi})">${esc(e.time)} ${lbl}</div>`;}).join('');
       chips+=lv.map(l=>`<div class="cal-ev ${l.status==='approved'?'ev-lv':'ev-lvp'}" title="${esc(l.emp)} &middot; ${esc(l.type)} (${l.status})">${esc(l.emp)} — ${l.status==='approved'?'leave':'leave (pending)'}</div>`).join('');
       const vts=VISITS.map((v,gi)=>({v,gi})).filter(o=>o.v.date===ds);
-      chips+=vts.map(({v,gi})=>{const st=v.status||'appointed';const cls=st==='completed'?'ev-visit-done':(st==='cancelled'?'ev-visit-cx':'ev-visit');const tm=(v.time||'').slice(0,5);const tip='Customer visit'+(st==='cancelled'?' (cancelled)':(st==='completed'?' (completed)':''))+' — '+v.company+(v.sales?' · '+v.sales:'')+(tm?' · '+tm:'');return `<div class="cal-ev ${cls}" title="${esc(tip)}" onclick="event.stopPropagation();openVisit(${gi})">${st==='completed'?'✓ ':''}${tm?esc(tm)+' ':''}${esc(v.company)}</div>`;}).join('');
+      chips+=vts.map(({v,gi})=>{const st=v.status||'appointed';const cls=st==='completed'?'ev-visit-done':(st==='cancelled'?'ev-visit-cx':'ev-visit');const tm=(v.time||'').slice(0,5);const tip='Customer visit'+(st==='cancelled'?' (cancelled)':(st==='completed'?' (completed)':''))+' — '+v.company+(v.sales?' · '+v.sales:'')+(v.covisit?' + '+v.covisit:'')+(tm?' · '+tm:'');return `<div class="cal-ev ${cls}" title="${esc(tip)}" onclick="event.stopPropagation();openVisit(${gi})">${st==='completed'?'✓ ':''}${tm?esc(tm)+' ':''}${esc(v.company)}</div>`;}).join('');
     }
     const click=mode==='leave'?'':` onclick="addEventOn('${ds}')"`;
     cells+=`<div class="cal-cell${ds===todayStr?' today':''}${hol.length?' holiday':''}"${click}><div class="cal-dn">${dd}</div>${chips}</div>`;}
@@ -2925,7 +3115,7 @@ function viewCalendarTab(){
   const monthName=first.toLocaleDateString('en-US',{month:'long',year:'numeric'});
   const N=new Date(),todayStr=isoFmt(N.getFullYear(),N.getMonth(),N.getDate());
   const gear=isOwner()?`<button class="gear" title="Annual holidays &amp; announcements" onclick="openCalSettings()">${svgIcon('settings')}</button>`:'';
-  return `<div class="mod-intro"><div class="row-between" style="flex-wrap:wrap;gap:10px"><p>Everyone's schedule in one place — meetings, approved leave, public holidays and birthdays. Click a day to add an appointment. Tick <b>Private</b> and the rest of the team only sees that you are busy.</p><div style="display:flex;gap:8px;align-items:center">${gear}<button class="btn-primary btn" onclick="addEventOn('${todayStr}')">+ Add appointment</button></div></div></div>
+  return `<div class="mod-intro"><div class="row-between" style="flex-wrap:wrap;gap:10px"><p>Everyone's schedule in one place — meetings, approved leave, public holidays and birthdays. Click a day to add an appointment. Tick <b>Private</b> and the rest of the team only sees that you are busy.</p><div style="display:flex;gap:8px;align-items:center">${gear}<button class="btn" id="visRefresh" title="Pull the latest customer visits from the Sales CRM" onclick="refreshVisits()">${mi('users',15)}Refresh visits</button><button class="btn-primary btn" onclick="addEventOn('${todayStr}')">+ Add appointment</button></div></div></div>
     <div class="cal-top"><div class="cal-title">${monthName}</div><div class="cal-nav"><button class="nav-btn" onclick="prevMonth()"><span class="ar">&lsaquo;</span>Prev</button><button class="nav-btn now" onclick="thisMonth()">Today</button><button class="nav-btn" onclick="nextMonth()">Next<span class="ar">&rsaquo;</span></button></div></div>
     <div class="cal-grid">${calMonthGrid(calY,calM,'work')}</div>
     <div class="wc-legend"><span><i style="background:var(--accent-soft);border:1px solid var(--accent)"></i>Appointment</span><span><i style="background:var(--surface-3);border:1px solid var(--line)"></i>Private &mdash; busy</span><span><i style="background:var(--ok-soft)"></i>Approved leave</span><span><i style="background:var(--warn-soft)"></i>Leave pending</span><span><i style="background:#FDECEC"></i>Public holiday</span><span><i style="background:#FFF4E0"></i>Birthday</span><span><i style="background:#EDE9FE"></i>Customer visit</span><span><i style="background:#DDD6FE"></i>Visit completed</span><span><i style="background:#F1F1F4"></i>Visit cancelled</span></div>`;
@@ -2939,6 +3129,15 @@ function viewLeaveTab(){
     ${pend?`<div class="approve-box"><div class="abh">${pend} request${pend===1?'':'s'} waiting for approval</div><div style="font-size:13px;color:var(--muted)">Approved days appear on the Work Calendar straight away.</div></div>`:''}
     <div class="sub-head" style="margin-top:20px">All requests</div><div style="border-top:1px solid var(--line)">${rows}</div>`;
 }
+/* v7.8 — meetings are logged in the Sales CRM, so the calendar can fall
+   behind while this tab stays open. This pulls just the visits back. */
+async function refreshVisits(){
+  const b=document.getElementById('visRefresh');
+  if(b){b.disabled=true;b.textContent='Refreshing\u2026';}
+  try{VISITS=await fetchVisits();go('timetable');
+    toast(VISITS.length+' customer visit'+(VISITS.length===1?'':'s')+' loaded');
+  }catch(e){dbErr(e,'refresh visits');
+    if(b){b.disabled=false;b.innerHTML=mi('users',15)+'Refresh visits';}}}
 function prevMonth(){calM--;if(calM<0){calM=11;calY--;}go('timetable');}
 function nextMonth(){calM++;if(calM>11){calM=0;calY++;}go('timetable');}
 function thisMonth(){const n=new Date();calY=n.getFullYear();calM=n.getMonth();go('timetable');}
@@ -2967,7 +3166,8 @@ function openVisit(i){const v=VISITS[i];if(!v)return;
   document.getElementById('modalTitle').textContent='Customer visit';
   const tm=(v.time||'').slice(0,5);
   const rows=[['Customer',v.company||'—'],['Date',(v.date||'—')+(tm?' · '+tm:'')]];
-  if(v.sales)rows.push(['Sales',v.sales]);
+  if(v.sales)rows.push(['Sales rep',v.sales]);
+  if(v.covisit)rows.push(['Co-visit',v.covisit]);
   rows.push(['Status',_visitStatusLabel(v.status)]);
   if(v.address)rows.push(['Address',v.address]);
   if(v.objective)rows.push(['Objective',v.objective]);
@@ -4982,6 +5182,12 @@ const MICON={
   user:'<circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/>',
   calendar:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v4M16 3v4"/>',
   arrowleft:'<path d="M15 6l-6 6 6 6"/>',
+  arrowright:'<path d="M9 6l6 6-6 6"/>',
+  circle:'<circle cx="12" cy="12" r="8.5"/>',
+  circlecheck:'<circle cx="12" cy="12" r="8.5" fill="currentColor" stroke="none"/><path d="M8.4 12.2l2.5 2.5 4.7-4.9" stroke="#fff" stroke-width="2"/>',
+  bell:'<path d="M6 9a6 6 0 0 1 12 0c0 4 1.2 5.4 2 6H4c.8-.6 2-2 2-6z"/><path d="M10 19a2 2 0 0 0 4 0"/>',
+  bellcog:'<path d="M6 9a6 6 0 0 1 11.2-3"/><path d="M6 9c0 4-1.2 5.4-2 6h10"/><path d="M8 19a2 2 0 0 0 3.8.6"/><circle cx="17.5" cy="15.5" r="2.5"/><path d="M17.5 11.6v1.1M17.5 18.3v1.1M13.9 13.6l.9.6M20.2 17.3l.9.6M13.9 17.9l.9-.6M20.2 14.2l.9-.6"/>',
+  lock:'<rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7.5a4 4 0 0 1 8 0V10"/>',
 };
 function mi(name,size){
   const p=MICON[name];if(!p)return '';
@@ -5001,7 +5207,90 @@ function viewDev(){const items=[{k:'devices',label:'Devices'},{k:'msoffice',labe
 function setDevSub(k){devSub=k;go('dev');}
 
 /* ---- Documents subtabs ---- */
-function viewDocuments(){const items=[{k:'general',label:'General'},{k:'forms',label:'Forms'}];if(!items.some(it=>it.k===docSub))docSub='general';const tabs=`<div class="subtabs">${items.map(it=>`<button class="subtab${docSub===it.k?' on':''}" onclick="setDocSub('${it.k}')">${it.label}</button>`).join('')}</div>`;return tabs+viewLog(docSub==='forms'?'docforms':'documents');}
+/* =====================================================================
+   Documents — real files, not links                              v7.8
+   ---------------------------------------------------------------------
+   General and Forms both hold files uploaded straight into Supabase
+   Storage. Everyone signed in can read and upload; a file can be removed
+   by whoever put it there, or by the GM or COM.
+   ===================================================================== */
+function fmtBytes(n){n=Number(n)||0;
+  if(n<1024)return n+' B';
+  if(n<1024*1024)return (n/1024).toFixed(0)+' KB';
+  return (n/1024/1024).toFixed(1)+' MB';}
+function fileExt(name){const p=String(name||'').split('.');
+  return p.length>1?p.pop().slice(0,4):'file';}
+function canDelDoc(f){return f.uid===MY.uid||isOwner();}
+function viewDocuments(){
+  const items=[{k:'general',label:'General'},{k:'forms',label:'Forms'}];
+  if(!items.some(it=>it.k===docSub))docSub='general';
+  const tabs=`<div class="subtabs">${items.map(it=>`<button class="subtab${docSub===it.k?' on':''}" onclick="setDocSub('${it.k}')">${it.label}</button>`).join('')}</div>`;
+  return tabs+viewDocFiles(docSub);}
+function viewDocFiles(section){
+  const list=DOCFILES.filter(f=>f.section===section);
+  const blurb=section==='forms'
+    ? 'Company forms and templates. Upload the file itself — everyone signed in can download it.'
+    : 'Shared company documents. Upload the file itself — everyone signed in can download it.';
+  const drop=`<div class="drop" id="dz" ondragover="docDrag(event,1)" ondragleave="docDrag(event,0)" ondrop="docDrop(event)"><div class="dt">Drop a file here, or choose one below</div><div class="dh">Up to 5 MB per file. Anything larger has to go on the Drive instead.</div><div class="dr"><input class="input" id="docTitle" placeholder="Title (optional)"><input type="file" id="docFile" style="font-size:12.5px"><button class="btn-primary btn" id="docUp" onclick="uploadDoc()">${mi('plus',15)}Upload</button></div><div id="docProg"></div></div>`;
+  const rows=list.map(f=>`<div class="frow"><div class="fi">${esc(fileExt(f.name))}</div><div class="fb"><div class="fn">${esc(f.title||f.name)}</div><div class="fm">${f.title?`<span>${esc(f.name)}</span>`:''}<span class="chip">${esc(fmtBytes(f.size))}</span><span class="ts">${esc(f.at)}</span><span class="by">· ${esc(f.by)}</span></div></div><div class="fa"><button class="icon-btn" title="Download" onclick="downloadDoc('${f.id}')">${mi('download',16)}</button>${canDelDoc(f)?`<button class="icon-btn" title="Delete" onclick="delDoc('${f.id}')">${mi('trash',16)}</button>`:`<span class="lock-i" title="Uploaded by ${esc(f.by)}">${mi('lock',14)}</span>`}</div></div>`).join('')
+    ||`<div class="empty-hint">${mi('info',14)}No files here yet.</div>`;
+  return `<div class="mod-intro"><p>${blurb}</p></div>${drop}<div class="sub-head" style="margin-top:20px">${list.length} file${list.length===1?'':'s'}</div><div style="border-top:1px solid var(--line)">${rows}</div>`;}
+function docDrag(e,on){e.preventDefault();
+  const z=document.getElementById('dz');if(z)z.classList.toggle('over',!!on);}
+function docDrop(e){docDrag(e,0);
+  const f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];if(!f)return;
+  const el=document.getElementById('docFile');
+  try{const dt=new DataTransfer();dt.items.add(f);el.files=dt.files;}catch(_){}
+  uploadDoc(f);}
+function docProg(pct,txt){const b=document.getElementById('docProg');if(!b)return;
+  b.innerHTML=pct==null?'':`<div class="fbar"><i style="width:${pct}%"></i></div><div class="dh" style="margin-top:6px">${esc(txt||'')}</div>`;}
+async function uploadDoc(dropped){
+  const el=document.getElementById('docFile');
+  const file=dropped||(el&&el.files&&el.files[0]);
+  if(!file){toast('Choose a file first',true);return;}
+  if(file.size>DOC_MAX){toast('That file is '+fmtBytes(file.size)+'. The limit is 5 MB.',true);return;}
+  const tEl=document.getElementById('docTitle');
+  const title=(tEl&&tEl.value.trim())||'';
+  const btn=document.getElementById('docUp');if(btn)btn.disabled=true;
+  docProg(35,'Uploading '+file.name+'…');
+  const safe=file.name.replace(/[^A-Za-z0-9._-]+/g,'_').slice(-80);
+  const path=docSub+'/'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,8)+'_'+safe;
+  try{
+    const {error:upErr}=await sb().storage.from(DOC_BUCKET)
+      .upload(path,file,{contentType:file.type||'application/octet-stream',upsert:false});
+    if(upErr)throw upErr;
+    docProg(80,'Saving…');
+    const {data,error}=await sb().from('doc_files').insert({section:docSub,
+      title:title||null,file_name:file.name,storage_path:path,
+      mime:file.type||null,size_bytes:file.size}).select().single();
+    if(error){await sb().storage.from(DOC_BUCKET).remove([path]);throw error;}
+    DOCFILES.unshift({id:data.id,section:data.section,title:data.title||'',
+      name:data.file_name,path:data.storage_path,mime:data.mime||'',
+      size:Number(data.size_bytes||0),uid:data.created_by,by:codeOf(data.created_by),
+      at:fmtAt(data.created_at)});
+    go('documents');toast(file.name+' uploaded');
+  }catch(e){
+    docProg(null);if(btn)btn.disabled=false;
+    dbErr(e,'upload the file');
+  }}
+async function downloadDoc(id){
+  const f=DOCFILES.find(x=>x.id===id);if(!f)return;
+  try{
+    const {data,error}=await sb().storage.from(DOC_BUCKET)
+      .createSignedUrl(f.path,60,{download:f.name});
+    if(error||!data||!data.signedUrl)throw (error||new Error('No link returned'));
+    const a=document.createElement('a');a.href=data.signedUrl;a.rel='noopener';
+    document.body.appendChild(a);a.click();a.remove();
+  }catch(e){dbErr(e,'open the file');}}
+async function delDoc(id){
+  const f=DOCFILES.find(x=>x.id===id);if(!f||!canDelDoc(f))return;
+  if(!confirm('Delete '+(f.title||f.name)+'?\n\nThe file is removed for everyone.'))return;
+  try{
+    const {error}=await sb().from('doc_files').delete().eq('id',id);
+    if(error)throw error;
+    await sb().storage.from(DOC_BUCKET).remove([f.path]);
+    DOCFILES=DOCFILES.filter(x=>x.id!==id);go('documents');toast('File deleted');
+  }catch(e){dbErr(e,'delete the file');}}
 function setDocSub(k){docSub=k;go('documents');}
 
 /* ---- Daily Operations · SOP — one folder per customer -------------------
@@ -5316,7 +5605,10 @@ async function changePw(){
   }catch(e){msg.style.color='var(--danger)';msg.textContent=e.message||'Could not update password.';}
 }
 /* ---- Settings · staff levels & access control ---- */
-const USER_LEVELS=['GM','COM','Manager','Senior Staff','Staff','Viewer'];
+/* v7.8 — Team Leader sits between Manager and Senior Staff. It carries no
+   extra workspace power on its own; what a Team Leader can open is still
+   set person by person in Access Control. */
+const USER_LEVELS=['GM','COM','Manager','Team Leader','Senior Staff','Staff','Viewer'];
 /* v7.3 — supabase-js sets data to null on a non-2xx reply, so the useful
    message the edge function sent sits unread inside error.context. Without
    this the user only ever sees "Edge Function returned a non-2xx status
@@ -5358,7 +5650,7 @@ function setSettingsSub(k){settingsSub=k;go('settings');}
 function viewSettingsUsers(){
   const rows=USERS_DATA.map((u,i)=>{
     const own=u.access==='Owner';const age=ageFrom(u.dob);
-    return `<div class="user-row" style="cursor:pointer" onclick="viewUserProfile(${i})">${avatarHTML(u)}<div class="un"><div class="n">${esc(fullName(u))}${age!==''?` <span style="color:var(--faint);font-weight:400">· ${age}</span>`:''}</div><div class="t">${esc(u.title)} · ${esc(u.dept)}</div></div><div class="uc">${esc(u.email)}</div><div class="uc">${esc(u.tel)}</div><span class="lvl-chip">${esc(u.level||u.access)}</span><button class="icon-btn" title="Edit" onclick="event.stopPropagation();openUserEdit(${i})">${mi('pencil',16)}</button>${own?'<span style="width:19px"></span>':`<button class="icon-btn" title="Delete" onclick="event.stopPropagation();delUser(${i})"><i class="ti ti-trash"></i></button>`}</div>`;}).join('');
+    return `<div class="user-row" style="cursor:pointer" onclick="viewUserProfile(${i})">${avatarHTML(u)}<div class="un"><div class="n">${esc(fullName(u))}${age!==''?` <span style="color:var(--faint);font-weight:400">· ${age}</span>`:''}</div><div class="t">${esc(u.title)} · ${esc(u.dept)}</div></div><div class="uc">${esc(u.email)}</div><div class="uc">${esc(u.tel)}</div><span class="lvl-chip">${esc(u.level||u.access)}</span><button class="icon-btn" title="Edit" onclick="event.stopPropagation();openUserEdit(${i})">${mi('pencil',16)}</button>${own?'<span style="width:19px"></span>':`<button class="icon-btn" title="Delete" onclick="event.stopPropagation();delUser(${i})">${mi('trash',16)}</button>`}</div>`;}).join('');
   return `<div class="mod-intro"><div class="row-between"><p>Adding someone here creates their sign-in account <b>and</b> their staff profile, which appears in People · Employee Profile. Every field is required except Certificates.</p><button class="btn-primary btn" onclick="openUserModal()"><i class="ti ti-user-plus"></i>Add staff member</button></div></div><div style="border-top:1px solid var(--line);margin-top:14px">${rows}</div>`;
 }
 
