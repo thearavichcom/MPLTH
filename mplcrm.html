@@ -3452,7 +3452,7 @@
                 if (forcedSalesScope) { salesFilter = myProfileId; }
 
                 const [resDeals, resMeets, resCC, resClients, resComp, resShip] = await Promise.all([
-                    db.from('deals').select(`*, user_profiles(name), status_changed_at, notes`), db.from('meetings').select(`*, user_profiles(name)`).order('meeting_date', { ascending: false }),
+                    db.from('deals').select(`*, user_profiles(name), status_changed_at, notes`), db.from('meetings').select(`*, user_profiles!meetings_sales_person_id_fkey(name)`).order('meeting_date', { ascending: false }),
                     db.from('cold_calls').select('*, user_profiles(name)').order('id', { ascending: false }), db.from('clients').select('*, user_profiles(name)'),
                     db.from('complaints').select('id, created_at, complain_date, company, problem_type, details, reason, solution, sales_person_id, status, acknowledged_by, manager_comment, user_profiles(name)').order('complain_date', { ascending: false }),
                     db.from('shipments').select('*, user_profiles(name)').order('ship_date', { ascending: false })
@@ -4802,7 +4802,7 @@
             try {
                 // Show ALL meetings in next 7 days (any status except cancelled)
                 // so that "appointed", "scheduled", or empty-status meetings all appear
-                let apQ = db.from('meetings').select('*, user_profiles(name)')
+                let apQ = db.from('meetings').select('*, user_profiles!meetings_sales_person_id_fkey(name)')
                     .gte('meeting_date', todayStr)
                     .lte('meeting_date', next7EndStr)
                     .neq('status', 'cancelled')
@@ -6742,7 +6742,7 @@ ${_orgNm}`
                     db.from('shipments').select('*, user_profiles(name)'),
                     db.from('deals').select('*, user_profiles(name)'),
                     db.from('clients').select('*, user_profiles(name)'),
-                    db.from('meetings').select('*, user_profiles(name)'),
+                    db.from('meetings').select('*, user_profiles!meetings_sales_person_id_fkey(name)'),
                     db.from('cold_calls').select('*, user_profiles(name)'),
                     db.from('overseas_agents').select('*'),
                     db.from('local_vendors').select('*'),
