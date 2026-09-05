@@ -1,11 +1,10 @@
 [build]
   publish = "."
   command = ""
-
 # Clean paths — ไม่แตะ root (thearavich.com เปล่า ๆ ยังเป็นของเดิม)
 [[redirects]]
   from = "/mplthcrm"
-  to = "/MPLCRM.html"
+  to = "/mplcrm.html"
   status = 200
 [[redirects]]
   from = "/mplthquote"
@@ -26,10 +25,6 @@
 [[redirects]]
   from = "/hsify"
   to = "/hsify.html"
-  status = 200
-[[redirects]]
-  from = "/dgify"
-  to = "/dgify.html"
   status = 200
 [[redirects]]
   from = "/pdf"
