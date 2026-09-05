@@ -1806,6 +1806,22 @@ tr.dragging{opacity:.4;}
 </div>
 </div>
 
+<!-- ═══ P&L MODAL (read-only) ═══ -->
+<div class="modal-overlay" id="plModal" onclick="if(event.target===this)closePLModal()">
+<div class="modal" style="max-width:900px">
+  <div class="modal-header">
+    <div class="modal-title" id="plModalTitle">📊 P&amp;L</div>
+    <button class="modal-close" onclick="closePLModal()">✕ Close</button>
+  </div>
+  <div class="modal-body" id="plModalBody" style="padding:0">
+    <!-- P&L breakdown -->
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-ghost" onclick="closePLModal()">Close</button>
+  </div>
+</div>
+</div>
+
 <!-- ═══ SETTINGS MODAL ═══ -->
 <div class="modal-overlay" id="settingsModal" onclick="if(event.target===this)closeSettings()">
 <div class="modal" style="max-width:660px">
@@ -3311,6 +3327,7 @@ function renderMyQuotes(quotes){
       <td class="mono r" style="font-weight:700;color:var(--navy)">฿${q.total_thb?fmtN(q.total_thb):'—'}</td>
       <td class="no-print" onclick="event.stopPropagation()">
         <div style="display:flex;gap:4px">
+          <button class="btn btn-xs btn-ghost" style="color:var(--navy);font-weight:700" onclick="openPLModal('${q.ref_no}')" title="Cost / Selling / GP breakdown">P&L</button>
           <button class="btn btn-xs btn-ghost" style="color:var(--navy);font-weight:700" onclick="createDealFromQuote('${q.ref_no}')" title="Create Deal in CRM Pipeline">Create deal</button>
           <button class="btn btn-xs btn-ghost" onclick="editQuote('${q.ref_no}')">Edit</button>
           <button class="btn btn-xs btn-ghost" onclick="duplicateQuote('${q.ref_no}')">Copy</button>
@@ -3401,6 +3418,7 @@ function renderAllQuotes(quotes){
       <td>
         <div style="display:flex;gap:4px">
           <button class="btn btn-xs btn-ghost" onclick="openViewQuote('${q.ref_no}')">View</button>
+          <button class="btn btn-xs btn-ghost" style="color:var(--navy);font-weight:700" onclick="openPLModal('${q.ref_no}')" title="Cost / Selling / GP breakdown">P&L</button>
         </div>
       </td>
     </tr>`;
@@ -4191,6 +4209,91 @@ function openViewQuote(refNo){
   document.getElementById('viewQuoteModal').classList.add('open');
 }
 function closeViewQuoteModal(){ document.getElementById('viewQuoteModal').classList.remove('open'); }
+
+/* ═══ P&L MODAL — read-only Cost / Selling / GP breakdown for a saved quote ═══ */
+function closePLModal(){ document.getElementById('plModal').classList.remove('open'); }
+function openPLModal(refNo){
+  const q = [...myQuotesData,...allQuotesData].find(x=>x.ref_no===refNo);
+  if(!q){ toast('Quote not found','error'); return; }
+
+  /* Use the FX rates stored on the quote, not live rates — this is a historical view */
+  const rates = q.exchange_rates || {};
+  const rateOf = cur => (!cur || cur==='THB') ? 1 : (parseFloat(rates[cur])||1);
+  const cy = q.mode==='intl' ? (q.intl_currency||'') : '฿';
+  const esc = s => String(s==null?'':s).replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+  const money = n => (cy==='฿'?'฿':cy+' ')+fmtN(n);
+
+  const secMeta = {local:(q.mode==='intl'?'Origin Charges':'Local Charges'), freight:(MODE_FREIGHT[q.mode]||'Freight'), dest:'Destination / Other'};
+  const cr = q.charge_rows||{};
+
+  let lineSell=0, lineCost=0, body='';
+  sections.forEach(sec=>{
+    const list = cr[sec]||[];
+    if(!list.length) return;
+    let sSell=0, sCost=0;
+    const rows = list.map(r=>{
+      const rate=rateOf(r.cur), vol=parseFloat(r.vol)||0;
+      const s=(parseFloat(r.sell)||0)*vol*rate, c=(parseFloat(r.cost)||0)*vol*rate, gp=s-c;
+      sSell+=s; sCost+=c;
+      return `<tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:5px 8px">${esc(r.desc)||'—'}</td>
+        <td style="padding:5px 8px;color:var(--tx3);font-size:11px">${esc(r.cur||'THB')}</td>
+        <td class="mono r" style="padding:5px 8px">${fmtN(c)}</td>
+        <td class="mono r" style="padding:5px 8px">${fmtN(s)}</td>
+        <td class="mono r" style="padding:5px 8px;font-weight:600;color:${gp<0?'var(--red)':'var(--green)'}">${fmtN(gp)}</td>
+      </tr>`;
+    }).join('');
+    lineSell+=sSell; lineCost+=sCost;
+    const sGp=sSell-sCost;
+    body += `<div style="padding:12px 18px 4px">
+      <div style="font-size:11px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">${esc(secMeta[sec]||sec)}</div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="border-bottom:1px solid var(--border2)">
+          <th style="padding:4px 8px;text-align:left;font-size:10px;color:var(--tx3)">Description</th>
+          <th style="padding:4px 8px;text-align:left;font-size:10px;color:var(--tx3);width:52px">Cur</th>
+          <th style="padding:4px 8px;text-align:right;font-size:10px;color:var(--tx3);width:110px">Cost</th>
+          <th style="padding:4px 8px;text-align:right;font-size:10px;color:var(--tx3);width:110px">Selling</th>
+          <th style="padding:4px 8px;text-align:right;font-size:10px;color:var(--tx3);width:110px">GP</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+        <tfoot><tr>
+          <td colspan="2" style="padding:5px 8px;font-size:11px;color:var(--tx2);font-weight:600">Subtotal</td>
+          <td class="mono r" style="padding:5px 8px;font-weight:700">${fmtN(sCost)}</td>
+          <td class="mono r" style="padding:5px 8px;font-weight:700">${fmtN(sSell)}</td>
+          <td class="mono r" style="padding:5px 8px;font-weight:700;color:${sGp<0?'var(--red)':'var(--green)'}">${fmtN(sGp)}</td>
+        </tr></tfoot>
+      </table>
+    </div>`;
+  });
+  if(!body) body = '<div style="padding:28px;text-align:center;color:var(--tx3)">No charge lines on this quotation.</div>';
+
+  /* Totals: prefer the values stored on the quote; fall back to the line sums */
+  const totSell = (parseFloat(q.total_thb)||0) || lineSell;
+  const totCost = (parseFloat(q.cost_thb)||0)  || lineCost;
+  const totGp   = totSell - totCost;
+  const margin  = totSell>0 ? (totGp/totSell*100) : 0;
+
+  const route = (q.pol&&q.pod) ? esc(q.pol+' → '+q.pod) : '—';
+  const kpi = (label,val,color)=>`<div style="flex:1;min-width:120px;padding:10px 12px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-sm)">
+    <div style="font-size:9.5px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.7px">${label}</div>
+    <div class="mono" style="font-size:17px;font-weight:700;margin-top:3px;color:${color}">${val}</div></div>`;
+
+  document.getElementById('plModalTitle').textContent = '📊 P&L — '+refNo;
+  document.getElementById('plModalBody').innerHTML =
+    `<div style="padding:14px 18px;background:var(--bg2);border-bottom:1px solid var(--border)">
+       <div style="font-size:13px;font-weight:700;color:var(--navy)">${esc(q.customer_name)||'—'}</div>
+       <div style="font-size:11px;color:var(--tx2);margin-top:2px">${route} · ${esc(q.date||'—')}</div>
+       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+         ${kpi('Total Cost', money(totCost), 'var(--tx)')}
+         ${kpi('Total Selling', money(totSell), 'var(--navy)')}
+         ${kpi('Gross Profit', money(totGp), totGp<0?'var(--red)':'var(--green)')}
+         ${kpi('GP Ratio', margin.toFixed(1)+'%', margin<0?'var(--red)':'var(--green)')}
+       </div>
+     </div>
+     <div style="padding-bottom:14px">${body}</div>
+     <div style="padding:0 18px 14px;font-size:10.5px;color:var(--tx3)">Converted with the FX rates saved on this quotation. VAT excluded.</div>`;
+  document.getElementById('plModal').classList.add('open');
+}
 function loadQuoteToEditor(){
   if(!viewingQuote) return;
   closeViewQuoteModal();
@@ -4267,7 +4370,7 @@ async function createDealFromQuote(arg){
     q = myQuotesData.find(x=>x.ref_no===ref) || allQuotesData.find(x=>x.ref_no===ref)
       || { ref_no:ref, customer_name:arg.dataset.cust||'', mode:arg.dataset.mode||'',
            pol:arg.dataset.pol||'', pod:arg.dataset.pod||'', inco:arg.dataset.inco||'',
-           gp_thb:parseFloat(arg.dataset.gp)||0 };
+           gp_thn:parseFloat(arg.dataset.gp)||0 };
   }
   if(!q){ toast('Quote not found','error'); return; }
   if(!sbClient || !currentUser){ toast('Not logged in','error'); return; }
@@ -4277,7 +4380,7 @@ async function createDealFromQuote(arg){
   const dealMode = modeMap[q.mode]||'OT';
   const route = (q.pol&&q.pod) ? (q.pol+' → '+q.pod) : '';
   const volStr = (q.vol && parseFloat(q.vol)>0) ? (parseFloat(q.vol)+' '+(q.vol_unit||'')).trim() : '';
-  const gp = (parseFloat(q.gp_thb)||0) || ((parseFloat(q.total_thb)||0) - (parseFloat(q.cost_thb)||0));
+  const gp = (parseFloat(q.gp_thn)||0) || ((parseFloat(q.total_thb)||0) - (parseFloat(q.cost_thb)||0));
   /* Auto title: Customer — Route · Mode [ref] */
   const title = [q.customer_name||'Deal', route, dealMode, volStr].filter(Boolean).join(' — ') + ' ['+(q.ref_no||'')+']';
 
@@ -4469,7 +4572,7 @@ function toastCreateDeal(quoteData){
   t.className='toast';
   const _gp = ((parseFloat(quoteData.total_thb)||0) - (parseFloat(quoteData.cost_thb)||0)) || 0;
   t.innerHTML='<span>➕ <button onclick="createDealFromQuote(this)" data-ref="'+
-    (quoteData.ref_no||'')+'\" data-cust="'+(quoteData.customer_name||'')+
+    (quoteData.ref_no||'')+'" data-cust="'+(quoteData.customer_name||'')+
     '" data-mode="'+(quoteData.mode||'')+
     '" data-gp="'+_gp+
     '" data-pol="'+(quoteData.pol||'')+'" data-pod="'+(quoteData.pod||'')+
@@ -5595,6 +5698,7 @@ function renderMyFolders(quotes){
         <td class="mono r" style="font-weight:700;color:var(--navy)">฿${q.total_thb?fmtN(q.total_thb):'—'}</td>
         <td class="no-print"><div style="display:flex;gap:4px;justify-content:flex-end;flex-wrap:wrap">
           <button class="btn btn-xs btn-lime" onclick="openViewQuote('${q.ref_no}')">👁 Review</button>
+          <button class="btn btn-xs btn-ghost" style="color:var(--navy);font-weight:700" onclick="openPLModal('${q.ref_no}')" title="Cost / Selling / GP breakdown">P&L</button>
           <button class="btn btn-xs btn-ghost" style="color:var(--navy);font-weight:700" onclick="createDealFromQuote('${q.ref_no}')" title="Create Deal in CRM Pipeline">Create deal</button>
           <button class="btn btn-xs btn-ghost" onclick="editQuote('${q.ref_no}')">Edit</button>
           <button class="btn btn-xs btn-ghost" onclick="duplicateQuote('${q.ref_no}')">Copy</button>
@@ -5640,7 +5744,7 @@ function renderAllFolders(quotes){
         <td class="muted">${_escHtml(q.date||'—')}</td>
         <td class="mono r" style="font-weight:700;color:var(--navy)">฿${q.total_thb?fmtN(q.total_thb):'—'}</td>
         <td>${status}</td>
-        <td class="no-print" style="text-align:right"><button class="btn btn-xs btn-lime" onclick="openViewQuote('${q.ref_no}')">👁 Review</button></td>
+        <td class="no-print" style="text-align:right"><div style="display:flex;gap:4px;justify-content:flex-end;flex-wrap:wrap"><button class="btn btn-xs btn-lime" onclick="openViewQuote('${q.ref_no}')">👁 Review</button><button class="btn btn-xs btn-ghost" style="color:var(--navy);font-weight:700" onclick="openPLModal('${q.ref_no}')" title="Cost / Selling / GP breakdown">P&L</button></div></td>
       </tr>`;
     }).join('');
     return `<div class="qfolder">
