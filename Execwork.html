@@ -1299,9 +1299,40 @@ function _num(v){if(v==null)return null;const n=parseFloat(String(v).replace(/[^
 
 /* generic CRUD ------------------------------------------------------ */
 let dbBusy=false;
-function dbErr(e,what){console.error(what,e);toast('Could not '+what+': '+(e.message||e),true);}
+/* v8.0 - the sign-in can be revoked from underneath a tab that is still on
+   screen: another device signs in, claimSession() revokes this refresh
+   token, and once the access token ages out supabase-js falls back to the
+   publishable key. PostgREST then sees anon, auth.uid() is NULL, and every
+   insert comes back as a raw "violates row-level security policy". Nothing
+   used to notice, because MY.uid was set once at sign-in and never checked
+   again. ensureAuth() re-reads the live session before each write. */
+let _authLost=false,_selfSignOut=false,_beatMiss=0;
+function sessionLost(){
+  if(_authLost)return;_authLost=true;
+  try{stopSessionWatch();}catch(e){}
+  toast('Your session has expired - please sign in again',true);
+  setTimeout(()=>{try{logout();}catch(e){}},1400);
+}
+async function ensureAuth(){
+  if(_authLost)return false;
+  try{
+    const {data,error}=await sb().auth.getSession();
+    const s=data&&data.session;
+    if(error||!s||!s.user||!s.user.id){sessionLost();return false;}
+    if(MY.uid&&s.user.id!==MY.uid){sessionLost();return false;}
+    if(!MY.uid){MY.uid=s.user.id;MY.email=s.user.email;}
+    return true;
+  }catch(e){sessionLost();return false;}
+}
+function dbErr(e,what){console.error(what,e);
+  const m=(e&&(e.message||e.msg))||String(e||'');
+  if(/JWT|jwt|token is expired|PGRST301|not authenticated|invalid claim/i.test(m)){sessionLost();return;}
+  if(/row-level security/i.test(m)){
+    toast('Could not '+what+': you do not have permission for this. If that is unexpected, sign out and sign in again.',true);return;}
+  toast('Could not '+what+': '+(e.message||e),true);}
 async function dbAdd(coll,obj){
   const m=MAP[coll];
+  if(!await ensureAuth())return null;
   try{
     const row=m.to(obj);row.created_by=MY.uid;
     const {data,error}=await sb().from(m.t).insert(row).select().single();
@@ -1311,6 +1342,7 @@ async function dbAdd(coll,obj){
 }
 async function dbUpdate(coll,id,patch){
   const m=MAP[coll];
+  if(!await ensureAuth())return null;
   try{
     const {data,error}=await sb().from(m.t).update(patch).eq('id',id).select().single();
     if(error)throw error;
@@ -1319,6 +1351,7 @@ async function dbUpdate(coll,id,patch){
 }
 async function dbDel(coll,id){
   const m=MAP[coll];
+  if(!await ensureAuth())return false;
   try{
     const {error}=await sb().from(m.t).delete().eq('id',id);
     if(error)throw error;
@@ -1718,6 +1751,7 @@ async function signIn(){
   const msg=document.getElementById('authMsg');const btn=document.querySelector('.auth-btn');
   if(!em||!pwv){msg.textContent='Please enter your email and password.';msg.className='auth-msg bad';return;}
   msg.textContent='Signing in…';msg.className='auth-msg';if(btn)btn.disabled=true;
+  _authLost=false;_selfSignOut=false;
   try{
     const {data,error}=await sb().auth.signInWithPassword({email:em,password:pwv});
     if(error)throw error;
@@ -1739,13 +1773,23 @@ async function claimSession(){
     {onConflict:'user_uid'});}catch(e){}
 }
 async function sessionBeat(){
-  if(!MY.uid||!MYDEVICE||_sessKicked)return;
+  if(!MY.uid||!MYDEVICE||_sessKicked||_authLost)return;
   try{
+    /* v8.0 — a dead token used to look exactly like being offline, so the
+       tab carried on as anon and every save came back as an RLS violation.
+       Check the session itself before trusting anything else. */
+    const {data:sd}=await sb().auth.getSession();
+    if(!sd||!sd.session||!sd.session.user){sessionLost();return;}
+    if(sd.session.user.id!==MY.uid){sessionLost();return;}
     const {data,error}=await sb().from('app_sessions').select('device_id')
       .eq('user_uid',MY.uid).maybeSingle();
     if(error)return;                       /* offline or blocked — leave them working */
     if(data&&data.device_id&&data.device_id!==MYDEVICE){kickSession();return;}
-    if(!data){await claimSession();return;}
+    /* v8.0 — an empty read is not proof the seat is free. Re-claiming on the
+       first miss fired signOut({scope:'others'}) every 45 seconds and let two
+       devices revoke each other in turn. Wait for three straight misses. */
+    if(!data){if(++_beatMiss<3)return;_beatMiss=0;await claimSession();return;}
+    _beatMiss=0;
     await sb().from('app_sessions').update({last_seen:new Date().toISOString()})
       .eq('user_uid',MY.uid).eq('device_id',MYDEVICE);
   }catch(e){}
@@ -1783,7 +1827,7 @@ async function restoreSession(){
   }catch(e){}
 }
 function login(){/* replaced by Supabase Auth — see signIn() */}
-async function logout(){closeUserMenu();stopSessionWatch();
+async function logout(){closeUserMenu();stopSessionWatch();_selfSignOut=true;_beatMiss=0;
   try{if(MY.uid&&MYDEVICE)await sb().from('app_sessions').delete().eq('user_uid',MY.uid).eq('device_id',MYDEVICE);}catch(e){}
   MYDEVICE=null;
   try{await sb().auth.signOut();}catch(e){}
@@ -1984,7 +2028,7 @@ function viewTodayDay(){
   const nav=`<div class="day-nav"><button class="nav-btn" onclick="shiftTodayMonth(-1)" title="Previous month"><span class="ar">&laquo;</span>Prev month</button><button class="nav-btn" onclick="shiftDay(-1)" title="Previous day"><span class="ar">&lsaquo;</span>Prev day</button><button class="nav-btn now" onclick="jumpDay('${_isoToday()}')">Today</button><button class="nav-btn" onclick="shiftDay(1)" title="Next day">Next day<span class="ar">&rsaquo;</span></button><button class="nav-btn" onclick="shiftTodayMonth(1)" title="Next month">Next month<span class="ar">&raquo;</span></button><span class="day-title">${esc(dayLabel(todayDate))}</span><input class="input" type="date" value="${todayDate}" style="width:auto;padding:7px 10px" onchange="jumpDay(this.value)"><span class="day-sub">${list.length} task${list.length===1?'':'s'} · ${doneN} done</span><span style="flex:1"></span><button class="btn" onclick="exportTodo('day')"><i class="ti ti-download"></i>Markdown (day)</button></div>`;
   const own=todoView===me||todoView==='both';
   const defR=todayDate+'T17:00';
-  const quick=own?`<div class="quick" style="flex-wrap:wrap"><input class="input" id="qa" placeholder="What needs doing?" onkeydown="if(event.key==='Enter')addTodo('qa')"><input class="input" id="qr" type="datetime-local" value="${defR}" style="width:auto;min-width:200px" title="Reminder time (required)"><button class="btn-primary btn" onclick="addTodo('qa')"><i class="ti ti-plus"></i>Add</button></div><div class="empty-hint" style="margin:8px 0 4px"><i class="ti ti-bell"></i>Every task carries a reminder — it shows up in the bell at the top of the screen.</div>`
+  const quick=own?`<div class="quick" style="flex-wrap:wrap"><input class="input" id="qa" placeholder="What needs doing?" onkeydown="if(event.key==='Enter')addTodo('qa','qr')"><input class="input" id="qr" type="datetime-local" value="${defR}" style="width:auto;min-width:200px" title="Reminder time (required)"><button class="btn-primary btn" onclick="addTodo('qa','qr')"><i class="ti ti-plus"></i>Add</button></div><div class="empty-hint" style="margin:8px 0 4px"><i class="ti ti-bell"></i>Every task carries a reminder — it shows up in the bell at the top of the screen.</div>`
     :`<div class="empty-hint" style="margin:16px 0 4px"><i class="ti ti-lock"></i>Viewing ${esc(todoView)}'s list — read only.</div>`;
   const rowHtml=todoRowHtml;
   const actL=list.filter(t=>!t.done),dnL=list.filter(t=>t.done);
@@ -2038,22 +2082,36 @@ function exportTodo(scope){
 function todayNotices(){if(!NOTICES.today.length)return '';const rows=NOTICES.today.map((n,i)=>`<div class="notice ok"><i class="ti ti-calendar-check"></i><div class="ntx">${esc(n.text)}<div class="nts">${esc(n.at)}</div></div><button class="nx" title="Dismiss" onclick="dismissNotice(${i})"><i class="ti ti-x"></i></button></div>`).join('');return `<div style="margin:2px 0 14px">${rows}</div>`;}
 async function dismissNotice(i){const n=NOTICES.today[i];if(!n)return;
   if(await dbDel('notices',n.id)){NOTICES.today.splice(i,1);go('today');}}
-/* v7.7 — add straight onto a named day, used by the panel columns. */
+/* v7.7 — add straight onto a named day, used by the panel columns.
+   v8.0 — the typed text is only cleared once the row is actually in the
+   database, the reminder is parsed before it is sent (an unparseable value
+   used to throw inside toISOString() and lose the task with no message at
+   all), and dbBusy stops Enter plus a click filing the same task twice. */
 async function addTodoOn(txtId,remId,ds){
   const el=document.getElementById(txtId);if(!el)return;const v=el.value.trim();
   const rel=document.getElementById(remId);const rv=rel?rel.value:'';
   if(!v){el.focus();return;}
   if(!rv){toast('Please set a reminder time for this task',true);if(rel)rel.focus();return;}
-  el.value='';
-  const r=await dbAdd('todos',{text:v,tags:['Untagged'],done:false,day:ds,remind_at:new Date(rv).toISOString()});
-  if(r){todos.unshift(r);if(cur==='today')go('today');renderReminders();}}
-async function addTodo(id){const el=document.getElementById(id);if(!el)return;const v=el.value.trim();
-  const rel=document.getElementById('qr');const rv=rel?rel.value:'';
+  const when=new Date(rv);
+  if(isNaN(when.getTime())){toast('That reminder time is not a valid date and time',true);if(rel)rel.focus();return;}
+  if(dbBusy)return;dbBusy=true;
+  let r=null;
+  try{r=await dbAdd('todos',{text:v,tags:['Untagged'],done:false,day:ds,remind_at:when.toISOString()});}
+  finally{dbBusy=false;}
+  if(r){el.value='';todos.unshift(r);if(cur==='today')go('today');renderReminders();}
+  else if(el)el.focus();}
+async function addTodo(id,remId){const el=document.getElementById(id);if(!el)return;const v=el.value.trim();
+  const rel=document.getElementById(remId||'qr');const rv=rel?rel.value:'';
   if(!v){el.focus();return;}
   if(!rv){toast('Please set a reminder time for this task',true);if(rel)rel.focus();return;}
-  el.value='';
-  const r=await dbAdd('todos',{text:v,tags:['Untagged'],done:false,day:todayDate,remind_at:new Date(rv).toISOString()});
-  if(r){todos.unshift(r);if(cur==='today')go('today');renderReminders();}}
+  const when=new Date(rv);
+  if(isNaN(when.getTime())){toast('That reminder time is not a valid date and time',true);if(rel)rel.focus();return;}
+  if(dbBusy)return;dbBusy=true;
+  let r=null;
+  try{r=await dbAdd('todos',{text:v,tags:['Untagged'],done:false,day:todayDate,remind_at:when.toISOString()});}
+  finally{dbBusy=false;}
+  if(r){el.value='';todos.unshift(r);if(cur==='today')go('today');renderReminders();}
+  else if(el)el.focus();}
 function editReminder(i){const t=todos[i];if(!t||t.by!==me)return;
   const cv=t.remind_at?(()=>{const d=new Date(t.remind_at);return _isoDay(d)+'T'+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');})():todayDate+'T17:00';
   openModal('Reminder · '+t.text.slice(0,40),[{name:'when',label:'Remind me at',type:'datetime',val:cv},{name:'day',label:'File under day',type:'date',val:dayOf(t)}],async v=>{
@@ -5967,6 +6025,16 @@ function closeNav(){document.getElementById('sb').classList.remove('open');docum
   document.head.appendChild(l);
 }catch(e){}})();
 
+/* v8.0 — listen for the session dying instead of drifting silently into
+   anon. SIGNED_OUT raised by our own logout() is ignored via _selfSignOut. */
+try{sb().auth.onAuthStateChange((ev,session)=>{
+  if(ev==='SIGNED_OUT'){
+    if(_selfSignOut||_sessKicked||!MY.uid)return;
+    sessionLost();return;}
+  if((ev==='TOKEN_REFRESHED'||ev==='SIGNED_IN'||ev==='USER_UPDATED')&&session&&session.user){
+    if(MY.uid&&session.user.id!==MY.uid){sessionLost();return;}
+    MY.uid=session.user.id;MY.email=session.user.email;_authLost=false;}
+});}catch(e){}
 restoreSession();
 /* keep live reminders (task due times, 7-day sales updates) fresh */
 setInterval(()=>{try{if(MY.uid)renderReminders();}catch(e){}},60000);
